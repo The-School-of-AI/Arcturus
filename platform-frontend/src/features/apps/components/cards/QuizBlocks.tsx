@@ -5,7 +5,7 @@ import { Star, Check, X, Upload, Play, GripVertical, ChevronUp, ChevronDown, Arr
 
 // Shared Quiz Typography & Colors - Consistent across all blocks
 const QUIZ_QUESTION_CLASS = "text-sm font-medium text-foreground text-left w-full";
-const QUIZ_POINTS_CLASS = "text-[10px] px-2 py-0.5 bg-neon-yellow/20 text-neon-yellow rounded-full shrink-0";
+const QUIZ_POINTS_CLASS = "text-xs px-2 py-0.5 bg-primary/20 text-primary rounded-full shrink-0";
 
 interface QuizBlockProps {
     data?: any;
@@ -45,7 +45,7 @@ export const QuizMCQCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, 
 
     const getOptionStyle = (index: number) => {
         if (!submitted) {
-            return selected === index ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border hover:border-neon-yellow/50';
+            return selected === index ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50';
         }
         if (index === correctAnswer) return 'border-emerald-500 bg-emerald-500/10';
         if (index === selected && index !== correctAnswer) return 'border-red-500 bg-red-500/10';
@@ -72,7 +72,7 @@ export const QuizMCQCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, 
                             )}
                             disabled={!isInteractive || submitted}
                         >
-                            <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] font-bold shrink-0">
+                            <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-xs font-bold shrink-0">
                                 {String.fromCharCode(65 + i)}
                             </span>
                             <span className="flex-1 text-left">{opt}</span>
@@ -83,7 +83,7 @@ export const QuizMCQCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, 
                 </div>
 
                 {isInteractive && !submitted && selected !== null && (
-                    <button onClick={handleSubmit} className="mt-2 px-4 py-2 bg-neon-yellow text-charcoal-900 rounded-lg text-xs font-bold self-start">
+                    <button onClick={handleSubmit} className="mt-2 px-4 py-2 bg-primary text-charcoal-900 rounded-lg text-xs font-bold self-start">
                         Submit
                     </button>
                 )}
@@ -120,7 +120,7 @@ export const QuizTFCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, s
 
     const getButtonStyle = (value: string) => {
         if (!submitted) {
-            return selected === value ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border hover:border-neon-yellow/50';
+            return selected === value ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50';
         }
         if (value === correctAnswer) return 'border-emerald-500 bg-emerald-500/10';
         if (value === selected && value !== correctAnswer) return 'border-red-500 bg-red-500/10';
@@ -153,7 +153,7 @@ export const QuizTFCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, s
                 </div>
 
                 {isInteractive && !submitted && selected !== null && (
-                    <button onClick={handleSubmit} className="px-4 py-2 bg-neon-yellow text-charcoal-900 rounded-lg text-xs font-bold self-start">
+                    <button onClick={handleSubmit} className="px-4 py-2 bg-primary text-charcoal-900 rounded-lg text-xs font-bold self-start">
                         Submit
                     </button>
                 )}
@@ -190,7 +190,7 @@ export const QuizMultiCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
         const isCorrect = correctAnswers.includes(index);
 
         if (!submitted) {
-            return isSelected ? 'border-neon-yellow bg-neon-yellow/10' : 'border-border hover:border-neon-yellow/50';
+            return isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50';
         }
         if (isCorrect) return 'border-emerald-500 bg-emerald-500/10';
         if (isSelected && !isCorrect) return 'border-red-500 bg-red-500/10';
@@ -215,7 +215,7 @@ export const QuizMultiCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                         >
                             <div className={cn(
                                 "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                                selected.includes(i) ? 'bg-neon-yellow border-neon-yellow' : 'border-current'
+                                selected.includes(i) ? 'bg-primary border-primary' : 'border-current'
                             )}>
                                 {selected.includes(i) && <Check className="w-3 h-3 text-charcoal-900" />}
                             </div>
@@ -225,7 +225,7 @@ export const QuizMultiCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                 </div>
 
                 {isInteractive && !submitted && (
-                    <button onClick={handleSubmit} className="px-4 py-2 bg-neon-yellow text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
+                    <button onClick={handleSubmit} className="px-4 py-2 bg-primary text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
                 )}
 
                 {submitted && showFeedback && explanation && (
@@ -267,7 +267,7 @@ export const QuizRatingCard: React.FC<QuizBlockProps> = ({ data = {}, config = {
                             <Star
                                 className={cn(
                                     "w-6 h-6 transition-colors",
-                                    (hovering || rating) >= i + 1 ? 'fill-neon-yellow text-neon-yellow' : 'text-muted-foreground'
+                                    (hovering || rating) >= i + 1 ? 'fill-primary text-primary' : 'text-muted-foreground'
                                 )}
                             />
                         </button>
@@ -326,8 +326,8 @@ export const QuizLikertCard: React.FC<QuizBlockProps> = ({ data = {}, config = {
                                                 className={cn(
                                                     "w-5 h-5 rounded-full border-2 transition-all",
                                                     selections[itemIdx] === scaleIdx
-                                                        ? 'bg-neon-yellow border-neon-yellow'
-                                                        : 'border-muted-foreground/50 hover:border-neon-yellow/50'
+                                                        ? 'bg-primary border-primary'
+                                                        : 'border-muted-foreground/50 hover:border-primary/50'
                                                 )}
                                             />
                                         </td>
@@ -372,7 +372,7 @@ export const QuizNPSCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}, 
                                 i === 10 ? 'rounded-r-lg' : '',
                                 i > 0 ? 'border-l-0' : '',
                                 selected === i
-                                    ? 'bg-neon-yellow text-charcoal-900 border-neon-yellow'
+                                    ? 'bg-primary text-charcoal-900 border-primary'
                                     : 'border-border text-foreground hover:bg-muted/50'
                             )}
                         >
@@ -480,8 +480,8 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
                             onDragEnd={(e) => handleDragEnd(e)}
                             className={cn(
                                 "flex items-center gap-2 p-2 rounded-lg border bg-muted/30 w-full transition-all",
-                                draggedIndex === i && "opacity-50 border-neon-yellow",
-                                dragOverIndex === i && draggedIndex !== i && "border-neon-yellow bg-neon-yellow/10",
+                                draggedIndex === i && "opacity-50 border-primary",
+                                dragOverIndex === i && draggedIndex !== i && "border-primary bg-primary/10",
                                 isInteractive && !submitted ? "cursor-grab active:cursor-grabbing border-border" : "border-border"
                             )}
                         >
@@ -503,14 +503,14 @@ export const QuizRankingCard: React.FC<QuizBlockProps> = ({ data = {}, config = 
                                 </button>
                             </div>
                             <GripVertical className="w-4 h-4 text-muted-foreground shrink-0 cursor-grab" />
-                            <span className="w-5 h-5 rounded-full bg-neon-yellow/20 text-neon-yellow text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                            <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
                             <span className="text-xs flex-1 text-left">{item}</span>
                         </div>
                     ))}
                 </div>
 
                 {isInteractive && !submitted && (
-                    <button onClick={handleSubmit} className="px-4 py-2 bg-neon-yellow text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
+                    <button onClick={handleSubmit} className="px-4 py-2 bg-primary text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
                 )}
             </div>
         </BaseCard>
@@ -554,7 +554,7 @@ export const QuizFITBCard: React.FC<QuizBlockProps> = ({ data = {}, config = {},
                                 "mx-1 px-2 py-1 border-b-2 bg-transparent text-center min-w-[80px] focus:outline-none",
                                 submitted
                                     ? (answer.toLowerCase() === correctAnswer.toLowerCase() ? 'border-emerald-500 text-emerald-400' : 'border-red-500 text-red-400')
-                                    : 'border-neon-yellow focus:border-neon-yellow'
+                                    : 'border-primary focus:border-primary'
                             )}
                             placeholder="..."
                         />
@@ -564,7 +564,7 @@ export const QuizFITBCard: React.FC<QuizBlockProps> = ({ data = {}, config = {},
                 </div>
 
                 {isInteractive && !submitted && answer && (
-                    <button onClick={handleSubmit} className="px-4 py-2 bg-neon-yellow text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
+                    <button onClick={handleSubmit} className="px-4 py-2 bg-primary text-charcoal-900 rounded-lg text-xs font-bold self-start">Submit</button>
                 )}
 
                 {submitted && showFeedback && (
@@ -606,7 +606,7 @@ export const QuizFITMBCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                                         value={answers[i] || ''}
                                         onChange={(e) => handleChange(i, e.target.value)}
                                         disabled={!isInteractive}
-                                        className="mx-1 px-2 py-0.5 border-b-2 border-neon-yellow bg-transparent text-center w-20 focus:outline-none text-sm"
+                                        className="mx-1 px-2 py-0.5 border-b-2 border-primary bg-transparent text-center w-20 focus:outline-none text-sm"
                                         placeholder={`(${i + 1})`}
                                     />
                                 )}
@@ -710,7 +710,7 @@ export const QuizEssayCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                     disabled={!isInteractive}
                 />
                 {showWordCount && (
-                    <div className="flex justify-between text-[10px] text-muted-foreground w-full">
+                    <div className="flex justify-between text-xs text-muted-foreground w-full">
                         <span>{wordCount} words</span>
                         <span>{minWords}-{maxWords} words required</span>
                     </div>
@@ -794,7 +794,7 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                         {matchedCount > 0 && (
                             <button
                                 onClick={clearAllMatches}
-                                className="text-[10px] px-2 py-0.5 text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                className="text-xs px-2 py-0.5 text-red-400 hover:bg-red-500/10 rounded transition-colors"
                             >
                                 Clear All
                             </button>
@@ -816,9 +816,9 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                                     onClick={() => handleLeftClick(i)}
                                     className={cn(
                                         "p-2 rounded-lg border text-xs text-left transition-all flex items-center justify-between",
-                                        selectedLeft === i && !isMatched && 'border-neon-yellow bg-neon-yellow/10',
+                                        selectedLeft === i && !isMatched && 'border-primary bg-primary/10',
                                         isMatched && 'border-emerald-500 bg-emerald-500/10 hover:border-red-400 hover:bg-red-500/10',
-                                        !isMatched && selectedLeft !== i && 'border-border hover:border-neon-yellow/50'
+                                        !isMatched && selectedLeft !== i && 'border-border hover:border-primary/50'
                                     )}
                                 >
                                     <span className="font-medium">{item}</span>
@@ -851,8 +851,8 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                                     className={cn(
                                         "p-2 rounded-lg border text-xs text-left transition-all",
                                         isMatched && 'border-emerald-500/50 bg-emerald-500/5 opacity-50 cursor-not-allowed',
-                                        !isMatched && 'border-border hover:border-neon-yellow/50',
-                                        selectedLeft !== null && !isMatched && 'hover:bg-neon-yellow/10 border-neon-yellow/30'
+                                        !isMatched && 'border-border hover:border-primary/50',
+                                        selectedLeft !== null && !isMatched && 'hover:bg-primary/10 border-primary/30'
                                     )}
                                 >
                                     {item}
@@ -863,7 +863,7 @@ export const QuizMatchCard: React.FC<QuizBlockProps> = ({ data = {}, config = {}
                 </div>
 
                 {/* Progress indicator */}
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                     Matched: {matchedCount} / {leftItems.length}
                 </div>
             </div>
@@ -906,7 +906,7 @@ export const QuizDropdownCard: React.FC<QuizBlockProps> = ({ data = {}, isIntera
                         value={selections[dropdownIndex] || ''}
                         onChange={(e) => handleChange(dropdownIndex, e.target.value)}
                         disabled={!isInteractive}
-                        className="mx-1 px-2 py-1 border border-neon-yellow/50 rounded bg-muted text-foreground text-sm focus:outline-none focus:border-neon-yellow"
+                        className="mx-1 px-2 py-1 border border-primary/50 rounded bg-muted text-foreground text-sm focus:outline-none focus:border-primary"
                     >
                         <option value="">Select...</option>
                         {dropdown.options.map((opt: string, j: number) => (
@@ -952,7 +952,7 @@ export const QuizCodeCard: React.FC<QuizBlockProps> = ({ data = {}, isInteractiv
                     disabled={!isInteractive}
                     spellCheck={false}
                 />
-                <div className="text-[10px] text-muted-foreground">{language}</div>
+                <div className="text-xs text-muted-foreground">{language}</div>
             </div>
         </BaseCard>
     );
@@ -969,10 +969,10 @@ export const QuizUploadCard: React.FC<QuizBlockProps> = ({ data = {}, isInteract
                     <p className={QUIZ_QUESTION_CLASS}>{question}</p>
                     <span className={QUIZ_POINTS_CLASS}>{score} pts</span>
                 </div>
-                <div className="flex-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 p-4 hover:border-neon-yellow/50 transition-colors cursor-pointer">
+                <div className="flex-1 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 p-4 hover:border-primary/50 transition-colors cursor-pointer">
                     <Upload className="w-8 h-8 text-muted-foreground" />
                     <p className="text-xs text-muted-foreground">Click to upload or drag and drop</p>
-                    <p className="text-[10px] text-muted-foreground">Allowed: {allowedTypes.join(', ')} (Max {maxSize}MB)</p>
+                    <p className="text-xs text-muted-foreground">Allowed: {allowedTypes.join(', ')} (Max {maxSize}MB)</p>
                 </div>
             </div>
         </BaseCard>
@@ -1022,7 +1022,7 @@ export const QuizSectionCard: React.FC<QuizBlockProps> = ({ data = {}, cardId, a
 
     return (
         <BaseCard cardId={cardId} autoFit={autoFit}>
-            <div className="p-4 border-l-4 border-neon-yellow w-full">
+            <div className="p-4 border-l-4 border-primary w-full">
                 <h3 className="text-lg font-bold text-foreground text-left">{titleVal}</h3>
                 {descVal && <p className="text-xs text-muted-foreground mt-1 text-left">{descVal}</p>}
             </div>
@@ -1043,7 +1043,7 @@ export const QuizMediaCard: React.FC<QuizBlockProps> = ({ data = {} }) => {
                 <div className="flex-1 bg-muted rounded flex items-center justify-center min-h-[100px]">
                     <Play className="w-12 h-12 text-muted-foreground" />
                 </div>
-                <div className="text-[10px] text-muted-foreground">{mediaType.toUpperCase()}</div>
+                <div className="text-xs text-muted-foreground">{mediaType.toUpperCase()}</div>
             </div>
         </BaseCard>
     );
@@ -1057,10 +1057,10 @@ export const QuizBranchCard: React.FC<QuizBlockProps> = ({ data = {} }) => {
             <div className="p-4 flex flex-col gap-3 h-full w-full">
                 <p className={QUIZ_QUESTION_CLASS}>{question}</p>
                 <div className="flex gap-2">
-                    <button className="flex-1 py-2 rounded-lg border border-border text-xs hover:border-neon-yellow/50 transition-all">Yes</button>
-                    <button className="flex-1 py-2 rounded-lg border border-border text-xs hover:border-neon-yellow/50 transition-all">No</button>
+                    <button className="flex-1 py-2 rounded-lg border border-border text-xs hover:border-primary/50 transition-all">Yes</button>
+                    <button className="flex-1 py-2 rounded-lg border border-border text-xs hover:border-primary/50 transition-all">No</button>
                 </div>
-                <div className="text-[10px] text-muted-foreground bg-muted/50 p-2 rounded">
+                <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                     ⚡ Conditional Logic Block
                 </div>
             </div>
@@ -1079,7 +1079,7 @@ export const QuizAICard: React.FC<QuizBlockProps> = ({ data = {}, isInteractive 
                 <div className="flex justify-between items-start gap-2 w-full">
                     <p className={QUIZ_QUESTION_CLASS}>{question}</p>
                     <div className="flex gap-1 shrink-0">
-                        <span className="text-[10px] px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">AI Graded</span>
+                        <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">AI Graded</span>
                         <span className={QUIZ_POINTS_CLASS}>{score} pts</span>
                     </div>
                 </div>

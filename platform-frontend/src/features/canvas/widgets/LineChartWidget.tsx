@@ -9,6 +9,7 @@ import {
     Legend,
     ResponsiveContainer
 } from 'recharts';
+import { useTheme } from '@/components/theme';
 
 interface LineChartWidgetProps {
     data: any[];
@@ -18,28 +19,37 @@ interface LineChartWidgetProps {
 }
 
 const LineChartWidget: React.FC<LineChartWidgetProps> = ({ data, xKey, lines, title }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
+
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+    const axisColor = isDark ? '#9CA3AF' : '#6b7280';
+    const tooltipBg = isDark ? '#1F2937' : '#ffffff';
+    const tooltipBorder = isDark ? '#374151' : '#e5e7eb';
+    const tooltipText = isDark ? '#F3F4F6' : '#1f2937';
+
     return (
-        <div className="w-full h-64 bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-            {title && <h3 className="text-sm font-semibold mb-2 text-gray-300">{title}</h3>}
+        <div className={`w-full h-64 p-4 rounded-lg border ${isDark ? 'bg-gray-800/50 border-gray-700' : 'bg-white border-gray-200 shadow-sm'}`}>
+            {title && <h3 className={`text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{title}</h3>}
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis
                         dataKey={xKey}
-                        stroke="#9CA3AF"
+                        stroke={axisColor}
                         fontSize={10}
                         tickLine={false}
                         axisLine={false}
                     />
                     <YAxis
-                        stroke="#9CA3AF"
+                        stroke={axisColor}
                         fontSize={10}
                         tickLine={false}
                         axisLine={false}
                     />
                     <Tooltip
-                        contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '4px', fontSize: '12px' }}
-                        itemStyle={{ color: '#F3F4F6' }}
+                        contentStyle={{ backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '4px', fontSize: '12px' }}
+                        itemStyle={{ color: tooltipText }}
                     />
                     <Legend wrapperStyle={{ fontSize: '10px' }} />
                     {lines.map((line) => (

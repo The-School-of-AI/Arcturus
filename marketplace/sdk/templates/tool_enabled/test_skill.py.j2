@@ -1,0 +1,51 @@
+"""Unit tests for {{ skill_name }} (tool-enabled skill)."""
+
+import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+
+@pytest.fixture
+def skill_dir() -> Path:
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture
+def manifest(skill_dir):
+    from marketplace.skill_base import load_manifest
+    return load_manifest(skill_dir / "manifest.yaml")
+
+
+def test_manifest_loads(manifest):
+    assert manifest.name == "{{ skill_name }}"
+
+
+def test_manifest_declares_network_permission(manifest):
+    """Tool-enabled skills must explicitly declare network permission."""
+    assert "network" in manifest.permissions
+
+
+def test_tool_runs_with_mocked_http():
+    """Test the tool without making real HTTP calls."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"args": {"q": "test"}}
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("httpx.get", return_value=mock_response):
+        from {{ skill_name }}.tools.main import run
+        result = run(query="test")
+
+    assert "result" in result
+    assert result["status_code"] == 200
+
+
+def test_tool_propagates_http_error():
+    """HTTP errors from the API should propagate (not be swallowed)."""
+    import httpx
+    with patch("httpx.get", side_effect=httpx.HTTPStatusError(
+        "404", request=MagicMock(), response=MagicMock()
+    )):
+        from {{ skill_name }}.tools.main import run
+        with pytest.raises(httpx.HTTPStatusError):
+            run(query="bad_query")

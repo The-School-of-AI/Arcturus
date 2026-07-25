@@ -20,7 +20,7 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
 
     const activeColor = '#F5C542'; // Neon Yellow
 
-    const handleClass = "w-2.5 h-2.5 bg-muted-foreground border-2 border-background transition-all duration-300 hover:scale-150 hover:border-neon-yellow";
+    const handleClass = "w-2.5 h-2.5 bg-muted-foreground border-2 border-background transition-all duration-300 hover:scale-150 hover:border-primary";
 
     const DualHandle = ({ pos, type, id }: { pos: Position; type: 'source' | 'target' | 'both', id?: string }) => (
         <>
@@ -55,11 +55,11 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
     return (
         <div
             className={cn(
-                "group relative px-5 py-4 rounded-xl border-2 transition-all duration-500 min-w-[240px] max-w-[320px] shadow-2xl",
+                "group relative px-5 py-4 rounded-xl border-2 transition-all duration-500 min-w-[240px] max-w-[320px] shadow-sm",
                 isHighlighted
-                    ? "bg-card border-neon-yellow ring-4 ring-neon-yellow/20 -translate-y-1"
+                    ? "bg-card border-primary ring-4 ring-primary/20 -translate-y-1"
                     : "bg-card/90 border-border hover:border-muted-foreground/30",
-                selected && !isHighlighted && "border-neon-yellow/50 ring-2 ring-neon-yellow/10"
+                selected && !isHighlighted && "border-primary/50 ring-2 ring-primary/10"
             )}
         >
             {/* Handles - Top (Target/Input) and Bottom (Source/Output) only */}
@@ -68,23 +68,23 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
 
             {/* Glowing Accent for Highlighted nodes */}
             {isHighlighted && (
-                <div className="absolute inset-0 rounded-xl bg-neon-yellow/5 blur-xl -z-10 animate-pulse-slow" />
+                <div className="absolute inset-0 rounded-xl bg-primary/5 blur-xl -z-10 animate-pulse-slow" />
             )}
 
             <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                     <span
                         className={cn(
-                            "text-sm font-black tracking-tight leading-tight transition-colors duration-900",
-                            isHighlighted ? "text-neon-yellow" : "text-foreground"
+                            "text-sm font-semibold tracking-tight leading-tight transition-colors duration-900",
+                            isHighlighted ? "text-primary" : "text-foreground"
                         )}
                     >
                         {data.label}
                     </span>
                     {isHighlighted && (
                         <div className="flex h-2 w-2 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-yellow opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-yellow"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                         </div>
                     )}
                 </div>
@@ -101,9 +101,9 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                             <span
                                 key={idx}
                                 className={cn(
-                                    "px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border transition-colors",
+                                    "px-1.5 py-0.5 rounded text-2xs font-semibold uppercase tracking-tight border transition-colors",
                                     isHighlighted
-                                        ? "bg-neon-yellow/10 border-neon-yellow/30 text-neon-yellow"
+                                        ? "bg-primary/10 border-primary/30 text-primary"
                                         : "bg-muted/50 border-border text-muted-foreground"
                                 )}
                             >
@@ -116,17 +116,17 @@ const FlowStepNode = ({ data, selected }: NodeProps<FlowStepNodeData>) => {
                 {data.details && data.details.length > 0 && (
                     <div className={cn(
                         "pt-3 border-t transition-colors",
-                        isHighlighted ? "border-neon-yellow/20" : "border-border/50"
+                        isHighlighted ? "border-primary/20" : "border-border/50"
                     )}>
                         <ul className="space-y-2">
                             {data.details.map((detail, idx) => (
                                 <li key={idx} className="flex gap-2 items-start">
                                     <div className={cn(
                                         "mt-1.5 h-1 w-1 rounded-full shrink-0",
-                                        isHighlighted ? "bg-neon-yellow/60" : "bg-gray-600"
+                                        isHighlighted ? "bg-primary/60" : "bg-gray-600"
                                     )} />
                                     <span className={cn(
-                                        "text-[10px] leading-relaxed font-medium transition-colors",
+                                        "text-xs leading-relaxed font-medium transition-colors",
                                         isHighlighted ? "text-foreground" : "text-muted-foreground"
                                     )}>
                                         {detail}

@@ -54,20 +54,18 @@ async def test_tg2_01_space_creation_and_isolation(tg2_guest_user, mock_llm_extr
     
     # 4. Run in Tech space: "What do I know about Luna?"
     # We should NOT retrieve the Cat memory
-    # First, configure the unified extractor for the retrieval query extracting 'Luna'
-    from memory.entity_extractor import EntityExtractor
-    
-    # Mock EntityExtractor for query side
-    class MockEntityExtractor(EntityExtractor):
-        def extract_from_query(self, query: str):
-            if "Luna" in query:
-                return [EntityItem(type="Animal", name="Luna")]
-            return []
-    
-    # Patch retriever entity extractor logic
-    from unittest.mock import patch
-    
-    with patch("memory.entity_extractor.EntityExtractor", MockEntityExtractor):
+    # Mock unified extractor's extract_from_query for retrieval (query NER)
+    from unittest.mock import MagicMock, patch
+
+    def _mock_extract_from_query(query: str):
+        if "Luna" in query:
+            return [{"type": "Animal", "name": "Luna"}]
+        return []
+
+    mock_unified = MagicMock()
+    mock_unified.extract_from_query.side_effect = _mock_extract_from_query
+
+    with patch("memory.memory_retriever.get_unified_extractor", return_value=mock_unified):
         try:
             context, results = retrieve(query="What do I know about Luna?", user_id=tg2_guest_user, space_id=tech_space_id)
             

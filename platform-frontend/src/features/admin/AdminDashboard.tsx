@@ -43,7 +43,7 @@ export const AdminDashboard: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-background text-foreground">
             <div className="border-b border-border px-6 py-4">
-                <h1 className="text-xl font-bold uppercase tracking-tighter">Watchtower Admin</h1>
+                <h1 className="text-xl font-bold uppercase tracking-tight">Watchtower Admin</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Tracing, cost, errors, health, feature flags, config, diagnostics, throttle, audit, and cache
                 </p>

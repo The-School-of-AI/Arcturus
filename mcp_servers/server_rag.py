@@ -524,9 +524,38 @@ def search_stored_documents_rag(query: str, doc_path: str = None, user_id: str =
         if gate_applied:
             mcp_log("SEARCH", f"Entity gate applied: {len(fused_results)} -> {len(gated_results)} results")
             if not gated_results and analysis.entities:
-                # No exact matches - return message indicating this
-                mcp_log("SEARCH", f"No documents contain '{analysis.entities}'")
-                return [f"⚠️ No documents contain '{', '.join(analysis.entities)}' exactly. Try a broader search."]
+                # Vector search didn't return matching chunks in top-K.
+                # Fallback: scan ALL metadata with progressive relaxation.
+                # Try all tokens first, then relax by requiring fewer tokens.
+                all_tokens = []
+                for entity in analysis.entities:
+                    all_tokens.extend(entity.lower().split())
+                all_tokens = list(dict.fromkeys(all_tokens))  # deduplicate, preserve order
+
+                mcp_log("SEARCH", f"Entity gate empty — keyword fallback for tokens: {all_tokens}")
+                keyword_hits = []
+
+                # Progressive: require N tokens, then N-1, ..., down to max(1, N-1)
+                for required_count in range(len(all_tokens), max(0, len(all_tokens) - 2), -1):
+                    if required_count < 1:
+                        break
+                    for entry in metadata:
+                        chunk_text = entry.get('chunk', '').lower()
+                        matched = sum(1 for t in all_tokens if t in chunk_text)
+                        if matched >= required_count:
+                            # Score by how many tokens matched (more = better)
+                            keyword_hits.append((entry['chunk_id'], matched / len(all_tokens)))
+                    if keyword_hits:
+                        mcp_log("SEARCH", f"Keyword fallback: {len(keyword_hits)} chunks matched {required_count}/{len(all_tokens)} tokens")
+                        break
+
+                if keyword_hits:
+                    # Sort by match quality (descending)
+                    keyword_hits.sort(key=lambda x: x[1], reverse=True)
+                    gated_results = keyword_hits
+                else:
+                    mcp_log("SEARCH", f"No documents contain '{analysis.entities}'")
+                    return [f"⚠️ No documents contain '{', '.join(analysis.entities)}' exactly. Try a broader search."]
         
         chunk_lookup = {e['chunk_id']: e for e in metadata}
         results = []

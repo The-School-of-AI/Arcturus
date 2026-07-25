@@ -1,11 +1,13 @@
 import asyncio
+import copy
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, ValidationError
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from core.schemas.studio_schema import ArtifactType, ExportFormat, ExportStatus
 from core.studio.orchestrator import ForgeOrchestrator
@@ -21,6 +23,7 @@ class CreateArtifactRequest(BaseModel):
     title: Optional[str] = None
     parameters: Optional[Dict] = Field(default_factory=dict)
     model: Optional[str] = None
+    slide_mode: Optional[str] = None  # "artistic" (default) or "business"
 
 
 class ApproveOutlineRequest(BaseModel):
@@ -32,6 +35,16 @@ class EditArtifactRequest(BaseModel):
     instruction: str
     base_revision_id: Optional[str] = None
     mode: Literal["apply", "dry_run"] = Field(default="apply", description="'apply' or 'dry_run'")
+
+
+class PatchContentRequest(BaseModel):
+    """Direct content_tree patch — replaces specific slide fields without LLM."""
+    slides: Dict[int, Dict[str, str]] = Field(
+        ...,
+        description="Map of slide index → {field: new_value}. "
+                    "Supported fields: title, and element content by element index (e.g. 'element_0_content').",
+    )
+    base_revision_id: Optional[str] = None
 
 
 class ExportArtifactRequest(BaseModel):
@@ -98,6 +111,7 @@ async def _create_artifact(request: CreateArtifactRequest, artifact_type: Artifa
             parameters=request.parameters,
             title=request.title,
             model=request.model,
+            slide_mode=request.slide_mode,
         )
         return result
     except ValidationError as e:
@@ -166,6 +180,84 @@ async def edit_artifact(artifact_id: str, request: EditArtifactRequest):
         raise HTTPException(status_code=400, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/{artifact_id}/content")
+async def patch_content_tree(artifact_id: str, request: PatchContentRequest):
+    """Directly patch slide text in the content tree without LLM.
+
+    Creates a revision so the change is undoable.
+    """
+    _validate_artifact_id(artifact_id)
+    storage = get_studio_storage()
+    artifact = storage.load_artifact(artifact_id)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail=f"Artifact not found: {artifact_id}")
+    if artifact.content_tree is None:
+        raise HTTPException(status_code=400, detail="No content tree to patch")
+
+    # Conflict check
+    if request.base_revision_id and artifact.revision_head_id:
+        if request.base_revision_id != artifact.revision_head_id:
+            raise HTTPException(status_code=409, detail="Content was modified since your last load. Please reload.")
+
+    slides = artifact.content_tree.get("slides")
+    if not isinstance(slides, list):
+        raise HTTPException(status_code=400, detail="Content tree has no slides array")
+
+    new_tree = copy.deepcopy(artifact.content_tree)
+    new_slides = new_tree["slides"]
+    changes: List[str] = []
+
+    for idx_str, fields in request.slides.items():
+        idx = int(idx_str) if isinstance(idx_str, str) else idx_str
+        if idx < 0 or idx >= len(new_slides):
+            continue
+        slide = new_slides[idx]
+        for field, value in fields.items():
+            if field == "title":
+                old = slide.get("title", "")
+                if old != value:
+                    slide["title"] = value
+                    changes.append(f"Slide {idx+1} title")
+            elif field == "html":
+                old = slide.get("html", "")
+                if old != value:
+                    slide["html"] = value
+                    changes.append(f"Slide {idx+1} html")
+            elif field.startswith("element_") and field.endswith("_content"):
+                # e.g. element_0_content → elements[0].content
+                parts = field.split("_")
+                try:
+                    el_idx = int(parts[1])
+                except (IndexError, ValueError):
+                    continue
+                elements = slide.get("elements", [])
+                if 0 <= el_idx < len(elements):
+                    old = elements[el_idx].get("content", "")
+                    if old != value:
+                        elements[el_idx]["content"] = value
+                        changes.append(f"Slide {idx+1} element {el_idx+1}")
+
+    if not changes:
+        return artifact.model_dump(mode="json")
+
+    # Save with revision
+    from core.studio.revision import RevisionManager
+    rev_mgr = RevisionManager(storage)
+    revision = rev_mgr.create_revision(
+        artifact_id=artifact_id,
+        content_tree=new_tree,
+        change_summary=f"Direct edit: {', '.join(changes[:5])}",
+        parent_revision_id=artifact.revision_head_id,
+    )
+
+    artifact.content_tree = new_tree
+    artifact.revision_head_id = revision.id
+    artifact.updated_at = datetime.now(timezone.utc)
+    storage.save_artifact(artifact)
+
+    return artifact.model_dump(mode="json")
 
 
 # --- Static GET routes MUST come before /{artifact_id} ---

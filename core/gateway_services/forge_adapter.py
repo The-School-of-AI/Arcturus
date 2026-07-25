@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 from typing import Any, Literal
 
+from config.gemini_client import is_gemini_configured
 from core.gateway_services.exceptions import IntegrationDependencyUnavailable, UpstreamIntegrationError
 from core.schemas.studio_schema import ArtifactType
 from core.studio.orchestrator import ForgeOrchestrator
@@ -23,9 +23,9 @@ class ForgeAdapter:
         template: str | None,
         oracle_context: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        if not os.getenv("GEMINI_API_KEY", "").strip():
+        if not is_gemini_configured():
             raise IntegrationDependencyUnavailable(
-                "GEMINI_API_KEY is required for Forge generation"
+                "Gemini API key or Vertex AI project is required for Forge generation"
             )
 
         enum_type = _ARTIFACT_TYPE_MAP[artifact_type]

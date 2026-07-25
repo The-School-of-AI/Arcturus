@@ -33,6 +33,7 @@ export interface API_Run {
     model?: string;  // Model used for this run
     total_tokens?: number;
     space_id?: string | null;  // Phase 4: optional space for run
+    source?: string;           // Channel origin: "web" | "telegram" | etc.
 }
 
 export interface API_RunDetail {
@@ -56,7 +57,8 @@ export const api = {
             model: r.model || 'default', // Use model from response or 'default'
             ragEnabled: true,
             total_tokens: r.total_tokens,
-            space_id: r.space_id ?? undefined
+            space_id: r.space_id ?? undefined,
+            source: r.source ?? 'web',
         }));
     },
 
@@ -106,7 +108,13 @@ export const api = {
 
     getMemories: async (space_id?: string | null): Promise<{ memories: any[] }> => {
         const params = space_id ? { space_id } : {};
-        const res = await axios.get(`${API_BASE}/remme/memories`, { params });
+        const res = await axios.get(`${API_BASE}/remme/memories`, { params, timeout: 8000 });
+        return res.data;
+    },
+
+    /** Migrate FAISS RemMe memories into the knowledge graph (entity extraction + ingestion). */
+    migrateGraphMemories: async (): Promise<{ status: string; migrated: number; skipped: number; errors: number; total: number; message?: string }> => {
+        const res = await axios.post(`${API_BASE}/graph/migrate`);
         return res.data;
     },
 
@@ -164,6 +172,21 @@ export const api = {
     put: axios.put,
     patch: axios.patch,
     delete: axios.delete,
+
+    // Scheduler
+    getJobs: async (): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/cron/jobs`);
+        return res.data;
+    },
+
+    triggerJob: async (jobId: string): Promise<void> => {
+        await axios.post(`${API_BASE}/cron/jobs/${jobId}/trigger`);
+    },
+
+    getJobHistory: async (jobId: string, limit: number = 50): Promise<any[]> => {
+        const res = await axios.get(`${API_BASE}/cron/jobs/${jobId}/history`, { params: { limit } });
+        return res.data;
+    },
 
     // Apps
     getApps: async (): Promise<any[]> => {
@@ -228,7 +251,7 @@ export const api = {
         return res.data;
     },
 
-    createArtifact: async (type: 'slides' | 'documents' | 'sheets', payload: { prompt: string; title?: string; parameters?: Record<string, any> }): Promise<any> => {
+    createArtifact: async (type: 'slides' | 'documents' | 'sheets', payload: { prompt: string; title?: string; parameters?: Record<string, any>; slide_mode?: string }): Promise<any> => {
         const res = await axios.post(`${API_BASE}/studio/${type}`, payload);
         return res.data;
     },
@@ -319,6 +342,33 @@ export const api = {
     editArtifact: async (artifactId: string, payload: { instruction: string; base_revision_id?: string; mode?: string }): Promise<any> => {
         const res = await axios.post(`${API_BASE}/studio/${artifactId}/edit`, payload);
         return res.data;
+    },
+
+    patchSlideContent: async (artifactId: string, slides: Record<number, Record<string, string>>, baseRevisionId?: string): Promise<any> => {
+        const res = await axios.patch(`${API_BASE}/studio/${artifactId}/content`, {
+            slides,
+            base_revision_id: baseRevisionId,
+        });
+        return res.data;
+    },
+
+    // ── Canvas ──────────────────────────────────────────────────────────
+    getCanvasSurfaces: async (): Promise<{ id: string, title: string, componentCount: number }[]> => {
+        const res = await axios.get(`${API_BASE}/canvas/surfaces`);
+        const raw = res.data.surfaces || res.data;
+        return raw.map((s: any) => ({
+            id: s.id,
+            title: s.title || s.id,
+            componentCount: s.componentCount ?? s.component_count ?? 0,
+        }));
+    },
+
+    deleteCanvasWidget: async (surfaceId: string, componentId: string): Promise<void> => {
+        await axios.delete(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}`);
+    },
+
+    renameCanvasWidget: async (surfaceId: string, componentId: string, newTitle: string): Promise<void> => {
+        await axios.patch(`${API_BASE}/canvas/state/${surfaceId}/component/${componentId}/rename`, { title: newTitle });
     },
 
     analyzeSheetUpload: async (artifactId: string, file: File): Promise<any> => {

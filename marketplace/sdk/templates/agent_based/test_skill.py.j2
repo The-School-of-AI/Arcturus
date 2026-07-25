@@ -1,0 +1,48 @@
+"""Unit tests for {{ skill_name }} (agent-based skill)."""
+
+import pytest
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+
+@pytest.fixture
+def skill_dir() -> Path:
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture
+def manifest(skill_dir):
+    from marketplace.skill_base import load_manifest
+    return load_manifest(skill_dir / "manifest.yaml")
+
+
+def test_manifest_loads(manifest):
+    assert manifest.name == "{{ skill_name }}"
+
+
+def test_manifest_has_skill_dependencies(manifest):
+    """Agent-based skills must declare the sub-skills they use."""
+    assert isinstance(manifest.skill_dependencies, list)
+    # Update this assertion once you fill in skill_dependencies in manifest.yaml
+    # assert "summariser" in manifest.skill_dependencies
+
+
+def test_tool_delegates_via_bridge():
+    """Bridge calls are mocked — the agent should call bridge.call_skill."""
+    mock_bridge = MagicMock()
+    mock_bridge.call_skill.return_value = {"result": "mocked"}
+
+    with patch("marketplace.bridge.MarketplaceBridge", return_value=mock_bridge):
+        from {{ skill_name }}.tools.main import run
+        result = run(task="summarise this document")
+
+    assert "result" in result
+
+
+def test_tool_handles_empty_task():
+    """Empty task string should not crash the orchestrator."""
+    mock_bridge = MagicMock()
+    with patch("marketplace.bridge.MarketplaceBridge", return_value=mock_bridge):
+        from {{ skill_name }}.tools.main import run
+        result = run(task="")
+    assert "result" in result

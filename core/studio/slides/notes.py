@@ -159,6 +159,7 @@ def repair_speaker_notes(content_tree: SlidesContentTree) -> SlidesContentTree:
             elements=slide.elements,
             speaker_notes=notes,
             metadata=slide.metadata,
+            html=slide.html,
         ))
 
     return SlidesContentTree(

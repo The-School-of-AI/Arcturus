@@ -36,10 +36,10 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
                 <button
                     onClick={() => setActiveTab('apps')}
                     className={cn(
-                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        "flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-all duration-300 relative",
                         activeTab === 'apps'
                             ? "text-primary bg-primary/5"
-                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-accent"
                     )}
                 >
                     My Apps
@@ -49,10 +49,10 @@ export const AppsSidebar: React.FC<AppsSidebarProps> = ({ className }) => {
                 <button
                     onClick={() => setActiveTab('components')}
                     className={cn(
-                        "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 relative",
+                        "flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-all duration-300 relative",
                         activeTab === 'components'
                             ? "text-primary bg-primary/5"
-                            : "text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
+                            : "text-muted-foreground/60 hover:text-foreground hover:bg-accent"
                     )}
                 >
                     Components
@@ -239,7 +239,7 @@ const ComponentLibrary = () => {
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                         placeholder="Search 60+ components..."
                     />
                 </div>
@@ -252,13 +252,13 @@ const ComponentLibrary = () => {
                         <div key={category.name} className="border border-border/50 rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted/10 shadow-sm">
                             <button
                                 onClick={() => toggleCategory(category.name)}
-                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-all duration-300"
+                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent transition-all duration-300"
                             >
-                                <span className="text-[10px] uppercase tracking-widest text-foreground font-black">
+                                <span className="text-xs uppercase tracking-wide text-foreground font-semibold">
                                     {category.name}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-muted-foreground">{category.items.length}</span>
+                                    <span className="text-xs text-muted-foreground">{category.items.length}</span>
                                     <svg
                                         className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                                         fill="none"
@@ -321,7 +321,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'markdown':
                 return (
                     <div className="w-full h-full flex flex-col p-3 gap-1.5">
-                        <div className="text-[9px] font-bold text-neon-yellow"># Heading</div>
+                        <div className="text-2xs font-bold text-primary"># Heading</div>
                         <div className="flex items-center gap-1">
                             <div className="w-1 h-1 rounded-full bg-gray-500" />
                             <div className="h-0.5 w-12 bg-gray-600 rounded-full" />
@@ -360,7 +360,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex flex-col justify-center p-3">
                         <div className="text-[8px] text-muted-foreground uppercase">Revenue</div>
-                        <div className="text-sm font-black text-foreground">$2.4M</div>
+                        <div className="text-sm font-semibold text-foreground">$2.4M</div>
                         <div className="flex items-center gap-0.5 text-green-400">
                             <TrendingUp className="w-2 h-2" />
                             <span className="text-[8px]">+12.5%</span>
@@ -371,7 +371,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex flex-col p-3">
                         <div className="text-[8px] text-muted-foreground">PRICE</div>
-                        <div className="text-[10px] font-bold text-foreground">$145.20</div>
+                        <div className="text-xs font-bold text-foreground">$145.20</div>
                         <div className="flex-1 flex items-end">
                             <svg viewBox="0 0 40 12" className="w-full h-3">
                                 <path d="M0 10 Q10 8 15 6 T25 4 T40 2" fill="none" stroke="#4ade80" strokeWidth="1.5" />
@@ -398,7 +398,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex items-end justify-center gap-1 p-2 pb-3">
                         {[40, 70, 35, 90, 55].map((h, i) => (
-                            <div key={i} className="w-2 bg-neon-yellow/80 rounded-t-sm" style={{ height: `${h}%` }} />
+                            <div key={i} className="w-2 bg-primary/80 rounded-t-sm" style={{ height: `${h}%` }} />
                         ))}
                     </div>
                 );
@@ -465,23 +465,23 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'profile':
                 return (
                     <div className="w-full h-full flex items-center gap-2 p-3">
-                        <div className="w-6 h-6 rounded bg-neon-yellow/20 flex items-center justify-center text-[9px] font-black text-neon-yellow">G</div>
+                        <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center text-2xs font-semibold text-primary">G</div>
                         <div className="flex flex-col">
-                            <div className="text-[9px] font-bold text-foreground">Alphabet</div>
-                            <div className="text-[7px] text-muted-foreground">GOOGL</div>
+                            <div className="text-2xs font-bold text-foreground">Alphabet</div>
+                            <div className="text-2xs text-muted-foreground">GOOGL</div>
                         </div>
                     </div>
                 );
             case 'valuation':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-muted-foreground">FAIR VALUE</div>
+                        <div className="text-2xs text-muted-foreground">FAIR VALUE</div>
                         <div className="flex items-center gap-1">
                             <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
                                 <div className="h-full w-3/5 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full" />
                             </div>
                         </div>
-                        <div className="flex justify-between text-[7px]">
+                        <div className="flex justify-between text-2xs">
                             <span className="text-foreground">$145</span>
                             <span className="text-green-400">$180</span>
                         </div>
@@ -490,15 +490,15 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'score_card':
                 return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-2">
-                        <div className="text-xl font-black text-neon-yellow">78</div>
-                        <div className="text-[7px] text-green-400">Healthy</div>
+                        <div className="text-xl font-semibold text-primary">78</div>
+                        <div className="text-2xs text-green-400">Healthy</div>
                     </div>
                 );
             case 'grade_card':
                 return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-2">
-                        <div className="text-xl font-black text-neon-yellow">A-</div>
-                        <div className="text-[7px] text-muted-foreground">Top Tier</div>
+                        <div className="text-xl font-semibold text-primary">A-</div>
+                        <div className="text-2xs text-muted-foreground">Top Tier</div>
                     </div>
                 );
             case 'peer_table':
@@ -530,7 +530,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         ].map((r, i) => (
                             <div key={i} className="bg-muted/50 rounded p-1 flex flex-col items-center">
                                 <div className="text-[6px] text-muted-foreground">{r.n}</div>
-                                <div className={`text-[9px] font-bold ${r.s}`}>{r.v}</div>
+                                <div className={`text-2xs font-bold ${r.s}`}>{r.v}</div>
                             </div>
                         ))}
                     </div>
@@ -545,7 +545,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                             { n: 'Financing', v: '-$600M', pos: false }
                         ].map((c, i) => (
                             <div key={i} className="flex justify-between items-center">
-                                <span className="text-[7px] text-muted-foreground">{c.n}</span>
+                                <span className="text-2xs text-muted-foreground">{c.n}</span>
                                 <span className={`text-[8px] font-bold ${c.pos ? 'text-green-400' : 'text-red-400'}`}>{c.v}</span>
                             </div>
                         ))}
@@ -579,7 +579,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                                     <span className="text-foreground">{r.v}</span>
                                 </div>
                                 <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-neon-yellow/70 rounded-full" style={{ width: r.w }} />
+                                    <div className="h-full bg-primary/70 rounded-full" style={{ width: r.w }} />
                                 </div>
                             </div>
                         ))}
@@ -602,7 +602,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'button':
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
-                        <div className="px-3 py-1 bg-neon-yellow text-charcoal-900 text-[8px] font-bold rounded">
+                        <div className="px-3 py-1 bg-primary text-charcoal-900 text-[8px] font-bold rounded">
                             Run Analysis
                         </div>
                     </div>
@@ -611,7 +611,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
                         <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center">
-                            <span className="text-[7px] text-muted-foreground">Enter ticker...</span>
+                            <span className="text-2xs text-muted-foreground">Enter ticker...</span>
                         </div>
                     </div>
                 );
@@ -619,8 +619,8 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex items-center justify-center p-3">
                         <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center justify-between">
-                            <span className="text-[7px] text-muted-foreground">Select...</span>
-                            <span className="text-[7px] text-muted-foreground">▼</span>
+                            <span className="text-2xs text-muted-foreground">Select...</span>
+                            <span className="text-2xs text-muted-foreground">▼</span>
                         </div>
                     </div>
                 );
@@ -629,7 +629,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                     <div className="w-full h-full flex items-center justify-center p-3">
                         <div className="w-full h-5 bg-background border border-gray-700 rounded px-1.5 flex items-center gap-1">
                             <Calendar className="w-2 h-2 text-muted-foreground" />
-                            <span className="text-[7px] text-muted-foreground">Dec 26, 2025</span>
+                            <span className="text-2xs text-muted-foreground">Dec 26, 2025</span>
                         </div>
                     </div>
                 );
@@ -640,7 +640,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                     <div className="w-full h-full flex flex-col p-2 gap-1">
                         {[0, 1].map(i => (
                             <div key={i} className="flex gap-1 items-start">
-                                <div className="w-1 h-1 rounded-full bg-neon-yellow mt-0.5" />
+                                <div className="w-1 h-1 rounded-full bg-primary mt-0.5" />
                                 <div className="flex-1">
                                     <div className="h-1 w-full bg-gray-600 rounded-full mb-0.5" />
                                     <div className="h-0.5 w-3/4 bg-gray-700 rounded-full" />
@@ -654,14 +654,14 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                     <div className="w-full h-full flex flex-col p-2 gap-0.5 ">
                         <div className="text-[6px] text-green-400">[INFO] Starting...</div>
                         <div className="text-[6px] text-muted-foreground">[DEBUG] Init</div>
-                        <div className="text-[6px] text-neon-yellow">[WARN] Check</div>
+                        <div className="text-[6px] text-primary">[WARN] Check</div>
                     </div>
                 );
             case 'json':
                 return (
                     <div className="w-full h-full flex flex-col p-2  text-[6px]">
                         <span className="text-muted-foreground">{"{"}</span>
-                        <span className="pl-1"><span className="text-neon-yellow">"ticker"</span>: <span className="text-green-400">"GOOGL"</span></span>
+                        <span className="pl-1"><span className="text-primary">"ticker"</span>: <span className="text-green-400">"GOOGL"</span></span>
                         <span className="text-muted-foreground">{"}"}</span>
                     </div>
                 );
@@ -713,7 +713,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                             { label: 'Pending', value: '$173K', change: '+2.8%', positive: true },
                         ].map((stat, i) => (
                             <div key={i} className="flex items-center justify-between">
-                                <div className="text-[7px] text-muted-foreground">{stat.label}</div>
+                                <div className="text-2xs text-muted-foreground">{stat.label}</div>
                                 <div className="flex items-center gap-1">
                                     <span className="text-[8px] font-bold text-foreground">{stat.value}</span>
                                     <span className={`text-[6px] ${stat.positive ? 'text-green-400' : 'text-red-400'}`}>{stat.change}</span>
@@ -728,7 +728,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
                         {[{ v: '10.4K', c: '-12%', neg: true }, { v: '56.1%', c: '+1.8%' }, { v: '5.2m', c: '+19%' }, { v: '3.2%', c: '-2.4%', neg: true }].map((s, i) => (
                             <div key={i} className="bg-muted/50 rounded p-1 flex flex-col items-center">
-                                <div className="text-[9px] font-bold text-foreground">{s.v}</div>
+                                <div className="text-2xs font-bold text-foreground">{s.v}</div>
                                 <div className={`text-[6px] ${s.neg ? 'text-red-400' : 'text-green-400'}`}>{s.c}</div>
                             </div>
                         ))}
@@ -751,7 +751,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex flex-col gap-1 p-2 justify-center">
                         {['Projects: 12', 'Issues: 47', 'PRs: 8'].map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-[7px] text-muted-foreground hover:text-foreground">
+                            <div key={i} className="flex items-center justify-between text-2xs text-muted-foreground hover:text-foreground">
                                 <span>{item.split(':')[0]}</span>
                                 <span className="text-foreground font-bold">{item.split(':')[1]}</span>
                             </div>
@@ -778,7 +778,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-2">
                         {[{ v: '$287K', c: '+8%', pos: true }, { v: '$9.4K', c: '-12%' }, { v: '$173K', c: '+2%', pos: true }, { v: '$52K', c: '-5%' }].map((s, i) => (
                             <div key={i} className="flex flex-col items-center justify-center">
-                                <div className="text-[9px] font-bold text-foreground">{s.v}</div>
+                                <div className="text-2xs font-bold text-foreground">{s.v}</div>
                                 <div className={`text-[6px] ${s.pos ? 'text-green-400' : 'text-red-400'}`}>{s.c}</div>
                             </div>
                         ))}
@@ -795,7 +795,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                                     <span className="text-muted-foreground">{u.p}%</span>
                                 </div>
                                 <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${u.p}%` }} />
+                                    <div className="h-full bg-primary rounded-full" style={{ width: `${u.p}%` }} />
                                 </div>
                             </div>
                         ))}
@@ -811,7 +811,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                             <circle cx="18" cy="18" r="14" fill="none" stroke="#10b981" strokeWidth="4" strokeDasharray="20 68" strokeDashoffset="-30" transform="rotate(-90 18 18)" />
                             <circle cx="18" cy="18" r="14" fill="none" stroke="#f59e0b" strokeWidth="4" strokeDasharray="15 73" strokeDashoffset="-50" transform="rotate(-90 18 18)" />
                         </svg>
-                        <div className="text-[7px] text-muted-foreground">8.3 / 15 GB</div>
+                        <div className="text-2xs text-muted-foreground">8.3 / 15 GB</div>
                     </div>
                 );
 
@@ -821,7 +821,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         <div className="flex items-center gap-1 text-[6px] text-foreground bg-muted/50 rounded px-1 py-0.5">
                             <span className="text-muted-foreground">▶</span>
                             <span>Project A</span>
-                            <span className="ml-auto text-neon-yellow">$45K</span>
+                            <span className="ml-auto text-primary">$45K</span>
                         </div>
                         <div className="flex items-center gap-1 text-[6px] text-muted-foreground pl-2">
                             <span>└ Frontend</span>
@@ -830,7 +830,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         <div className="flex items-center gap-1 text-[6px] text-foreground bg-muted/50 rounded px-1 py-0.5">
                             <span className="text-muted-foreground">▶</span>
                             <span>Campaign</span>
-                            <span className="ml-auto text-neon-yellow">$28K</span>
+                            <span className="ml-auto text-primary">$28K</span>
                         </div>
                     </div>
                 );
@@ -839,11 +839,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_mcq':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground font-medium">What is 2+2?</div>
+                        <div className="text-2xs text-foreground font-medium">What is 2+2?</div>
                         <div className="flex flex-col gap-0.5">
                             {['4', '5', '3'].map((opt, i) => (
-                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i === 0 ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted/40 text-muted-foreground")}>
-                                    <div className={cn("w-2 h-2 rounded-full border", i === 0 ? "border-neon-yellow bg-neon-yellow" : "border-gray-500")} />
+                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i === 0 ? "bg-primary/20 text-primary" : "bg-muted/40 text-muted-foreground")}>
+                                    <div className={cn("w-2 h-2 rounded-full border", i === 0 ? "border-primary bg-primary" : "border-gray-500")} />
                                     <span>{opt}</span>
                                 </div>
                             ))}
@@ -853,7 +853,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_tf':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground font-medium">The sky is blue</div>
+                        <div className="text-2xs text-foreground font-medium">The sky is blue</div>
                         <div className="flex gap-1">
                             <div className="flex-1 bg-green-500/20 text-green-400 rounded px-2 py-1 text-[8px] text-center font-medium">TRUE</div>
                             <div className="flex-1 bg-muted/40 text-muted-foreground rounded px-2 py-1 text-[8px] text-center">FALSE</div>
@@ -863,11 +863,11 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_multi':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground font-medium">Select all that apply</div>
+                        <div className="text-2xs text-foreground font-medium">Select all that apply</div>
                         <div className="flex flex-col gap-0.5">
                             {['Option A', 'Option B', 'Option C'].map((opt, i) => (
-                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i < 2 ? "bg-neon-yellow/20 text-neon-yellow" : "bg-muted/40 text-muted-foreground")}>
-                                    <div className={cn("w-2 h-2 rounded-sm border", i < 2 ? "border-neon-yellow bg-neon-yellow" : "border-gray-500")} />
+                                <div key={i} className={cn("flex items-center gap-1 px-1 py-0.5 rounded text-[6px]", i < 2 ? "bg-primary/20 text-primary" : "bg-muted/40 text-muted-foreground")}>
+                                    <div className={cn("w-2 h-2 rounded-sm border", i < 2 ? "border-primary bg-primary" : "border-gray-500")} />
                                     <span>{opt}</span>
                                 </div>
                             ))}
@@ -877,10 +877,10 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_rating':
                 return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-2 gap-1">
-                        <div className="text-[7px] text-foreground font-medium">Rate this</div>
+                        <div className="text-2xs text-foreground font-medium">Rate this</div>
                         <div className="flex gap-0.5">
                             {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} className={cn("w-3 h-3", s <= 4 ? "fill-neon-yellow text-neon-yellow" : "text-gray-500")} />
+                                <Star key={s} className={cn("w-3 h-3", s <= 4 ? "fill-primary text-primary" : "text-gray-500")} />
                             ))}
                         </div>
                     </div>
@@ -891,7 +891,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         <div className="text-[6px] text-foreground font-medium">I agree with...</div>
                         <div className="flex gap-0.5 justify-center">
                             {['1', '2', '3', '4', '5'].map((n, i) => (
-                                <div key={i} className={cn("w-3 h-3 rounded-full border flex items-center justify-center text-[5px]", i === 3 ? "bg-neon-yellow border-neon-yellow text-black" : "border-gray-500 text-gray-500")}>
+                                <div key={i} className={cn("w-3 h-3 rounded-full border flex items-center justify-center text-[5px]", i === 3 ? "bg-primary border-primary text-black" : "border-gray-500 text-gray-500")}>
                                     {n}
                                 </div>
                             ))}
@@ -909,7 +909,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                             {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                                 <div key={n} className={cn("w-2 h-3 rounded-sm text-[4px] flex items-center justify-center",
                                     n <= 6 ? "bg-red-500/50" : n <= 8 ? "bg-yellow-500/50" : "bg-green-500/50",
-                                    n === 9 ? "ring-1 ring-neon-yellow" : ""
+                                    n === 9 ? "ring-1 ring-primary" : ""
                                 )}>{n}</div>
                             ))}
                         </div>
@@ -932,33 +932,33 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_fitb':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">The capital of France is <span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">Paris</span></div>
+                        <div className="text-2xs text-foreground">The capital of France is <span className="px-1 bg-primary/20 text-primary rounded">Paris</span></div>
                     </div>
                 );
             case 'quiz_fitmb':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[6px] text-foreground"><span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">A</span> + <span className="px-1 bg-neon-yellow/20 text-neon-yellow rounded">B</span> = C</div>
+                        <div className="text-[6px] text-foreground"><span className="px-1 bg-primary/20 text-primary rounded">A</span> + <span className="px-1 bg-primary/20 text-primary rounded">B</span> = C</div>
                     </div>
                 );
             case 'quiz_number':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">What is 5 × 7?</div>
-                        <div className="bg-muted/40 rounded px-2 py-1 text-[10px] text-neon-yellow font-mono">35</div>
+                        <div className="text-2xs text-foreground">What is 5 × 7?</div>
+                        <div className="bg-muted/40 rounded px-2 py-1 text-xs text-primary font-mono">35</div>
                     </div>
                 );
             case 'quiz_formula':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">Solve: x² = 16</div>
-                        <div className="bg-muted/40 rounded px-2 py-1 text-[8px] text-neon-yellow font-mono">x = ±4</div>
+                        <div className="text-2xs text-foreground">Solve: x² = 16</div>
+                        <div className="bg-muted/40 rounded px-2 py-1 text-[8px] text-primary font-mono">x = ±4</div>
                     </div>
                 );
             case 'quiz_date':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">When did WWII end?</div>
+                        <div className="text-2xs text-foreground">When did WWII end?</div>
                         <div className="flex items-center gap-1 bg-muted/40 rounded px-2 py-1 text-[8px] text-muted-foreground">
                             <Calendar className="w-2 h-2" />
                             <span>1945-09-02</span>
@@ -968,7 +968,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_essay':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">Explain your answer</div>
+                        <div className="text-2xs text-foreground">Explain your answer</div>
                         <div className="flex-1 border border-dashed border-gray-600 rounded p-1">
                             <div className="h-0.5 w-full bg-gray-600 rounded mb-0.5" />
                             <div className="h-0.5 w-4/5 bg-gray-700 rounded mb-0.5" />
@@ -984,23 +984,23 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         <div className="flex-1 flex flex-col gap-0.5">
                             {['A', 'B'].map((l) => <div key={l} className="bg-muted/40 rounded px-1 py-0.5 text-[6px] text-muted-foreground">{l}</div>)}
                         </div>
-                        <div className="flex items-center"><ArrowRight className="w-2 h-2 text-neon-yellow" /></div>
+                        <div className="flex items-center"><ArrowRight className="w-2 h-2 text-primary" /></div>
                         <div className="flex-1 flex flex-col gap-0.5">
-                            {['1', '2'].map((r) => <div key={r} className="bg-neon-yellow/20 rounded px-1 py-0.5 text-[6px] text-neon-yellow">{r}</div>)}
+                            {['1', '2'].map((r) => <div key={r} className="bg-primary/20 rounded px-1 py-0.5 text-[6px] text-primary">{r}</div>)}
                         </div>
                     </div>
                 );
             case 'quiz_dropdown':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[6px] text-foreground">The <span className="px-1 bg-muted rounded text-neon-yellow">🔽 cat</span> sat on the <span className="px-1 bg-muted rounded text-neon-yellow">🔽 mat</span></div>
+                        <div className="text-[6px] text-foreground">The <span className="px-1 bg-muted rounded text-primary">🔽 cat</span> sat on the <span className="px-1 bg-muted rounded text-primary">🔽 mat</span></div>
                     </div>
                 );
             case 'quiz_code':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-0.5 bg-charcoal-900 rounded">
                         <div className="text-[6px] text-purple-400">def</div>
-                        <div className="text-[6px] text-neon-yellow">  solve():</div>
+                        <div className="text-[6px] text-primary">  solve():</div>
                         <div className="text-[6px] text-gray-400">    # code</div>
                     </div>
                 );
@@ -1021,7 +1021,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         </div>
                         <div className="flex gap-0.5">
                             <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                            <div className="w-2 h-2 rounded-full bg-neon-yellow/50" />
+                            <div className="w-2 h-2 rounded-full bg-primary/50" />
                         </div>
                     </div>
                 );
@@ -1038,13 +1038,13 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_section':
                 return (
                     <div className="w-full h-full flex items-center justify-center p-2">
-                        <div className="text-[9px] font-bold text-foreground border-b-2 border-neon-yellow pb-0.5">Section 1</div>
+                        <div className="text-2xs font-bold text-foreground border-b-2 border-primary pb-0.5">Section 1</div>
                     </div>
                 );
             case 'quiz_media':
                 return (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 rounded">
-                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center">
                             <Play className="w-3 h-3 text-primary-foreground" />
                         </div>
                     </div>
@@ -1053,7 +1053,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
                         <div className="text-[6px] text-foreground">If answer = A</div>
-                        <div className="flex items-center gap-1 text-[6px] text-neon-yellow">
+                        <div className="flex items-center gap-1 text-[6px] text-primary">
                             <ArrowRight className="w-2 h-2" /><span>Go to Q5</span>
                         </div>
                     </div>
@@ -1061,7 +1061,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'quiz_ai':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="text-[7px] text-foreground">AI will grade:</div>
+                        <div className="text-2xs text-foreground">AI will grade:</div>
                         <div className="flex items-center gap-1 text-[6px] text-purple-400">
                             <MessageSquare className="w-3 h-3" />
                             <span>Evaluating...</span>
@@ -1115,7 +1115,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         {[35, 30, 48].map((p, i) => (
                             <div key={i} className="flex flex-col gap-0.5">
                                 <div className="h-1 bg-charcoal-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-neon-yellow rounded-full" style={{ width: `${p}%` }} />
+                                    <div className="h-full bg-primary rounded-full" style={{ width: `${p}%` }} />
                                 </div>
                             </div>
                         ))}
@@ -1164,7 +1164,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                         {[{ n: 'Alpha', a: '$2.5K' }, { n: 'Beta', a: '$1.2K' }].map((p, i) => (
                             <div key={i} className="flex justify-between text-[6px]">
                                 <span className="text-muted-foreground">{p.n}</span>
-                                <span className="text-neon-yellow">{p.a}</span>
+                                <span className="text-primary">{p.a}</span>
                             </div>
                         ))}
                     </div>
@@ -1173,7 +1173,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
             case 'ai_chat':
                 return (
                     <div className="w-full h-full flex flex-col p-2 gap-1">
-                        <div className="self-end bg-neon-yellow/20 rounded-lg px-2 py-1 text-[6px] text-neon-yellow">Hello!</div>
+                        <div className="self-end bg-primary/20 rounded-lg px-2 py-1 text-[6px] text-primary">Hello!</div>
                         <div className="self-start bg-muted rounded-lg px-2 py-1 text-[6px] text-muted-foreground">Hi there...</div>
                     </div>
                 );
@@ -1219,7 +1219,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
                 "group relative flex flex-col rounded-xl border transition-all duration-300 overflow-hidden select-none",
                 "hover:shadow-xl hover:scale-[1.02]",
                 isSelected
-                    ? "border-primary shadow-lg shadow-primary/10 ring-1 ring-primary/20"
+                    ? "border-primary shadow-sm shadow-primary/10 ring-1 ring-primary/20"
                     : "border-border/50 hover:border-primary/50"
             )}
         >
@@ -1232,7 +1232,7 @@ const ComponentPreviewCard = ({ type, label, icon: Icon }: { type: AppCardType, 
 
             {/* Label */}
             <div className={cn(
-                "px-2 py-2 text-[10px] font-bold uppercase tracking-widest text-center border-t transition-all duration-300",
+                "px-2 py-2 text-xs font-bold uppercase tracking-wide text-center border-t transition-all duration-300",
                 isSelected
                     ? "bg-primary/10 border-primary/20 text-primary"
                     : "bg-muted/30 border-border/30 text-muted-foreground group-hover:text-foreground"
@@ -1290,18 +1290,18 @@ const SavedAppsList = () => {
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Search apps..."
-                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-neon-yellow/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
+                        className="w-full bg-muted border border-border rounded-lg text-xs pl-8 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground transition-all h-auto"
                     />
                 </div>
                 {/* Minimal Sort Toggle */}
                 <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Sort:</span>
+                    <span className="text-2xs text-muted-foreground uppercase tracking-wider">Sort:</span>
                     <button
                         onClick={() => setSortBy('time')}
                         className={cn(
-                            "text-[9px] uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
+                            "text-2xs uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
                             sortBy === 'time'
-                                ? "text-neon-yellow bg-neon-yellow/10"
+                                ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -1310,9 +1310,9 @@ const SavedAppsList = () => {
                     <button
                         onClick={() => setSortBy('name')}
                         className={cn(
-                            "text-[9px] uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
+                            "text-2xs uppercase tracking-wider px-2 py-0.5 rounded transition-colors",
                             sortBy === 'name'
-                                ? "text-neon-yellow bg-neon-yellow/10"
+                                ? "text-primary bg-primary/10"
                                 : "text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -1339,7 +1339,7 @@ const SavedAppsList = () => {
                                     key={app.id}
                                     className={cn(
                                         "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-                                        "hover:shadow-lg",
+                                        "hover:shadow-sm",
                                         isActive
                                             ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                             : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
@@ -1359,7 +1359,7 @@ const SavedAppsList = () => {
                                                     }}
                                                     onBlur={() => handleSaveEdit(app.id)}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="w-full bg-muted border border-neon-yellow/50 rounded px-2 py-1 text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-neon-yellow/30"
+                                                    className="w-full bg-muted border border-primary/50 rounded px-2 py-1 text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
                                                 />
                                             ) : (
                                                 <TooltipProvider>
@@ -1394,11 +1394,11 @@ const SavedAppsList = () => {
                                     </div>
 
                                     <div className="mt-0 pt-0 border-t border-border/50 flex items-center justify-between">
-                                        <span className="text-[9px] text-muted-foreground font-mono opacity-60">
+                                        <span className="text-2xs text-muted-foreground font-mono opacity-60">
                                             {isActive ? "Currently Editing" : new Date(app.lastModified).toLocaleDateString()}
                                         </span>
                                         {isActive && (
-                                            <span className="px-2 py-0.5 rounded-full text-[8px] uppercase font-black tracking-widest bg-primary/10 text-primary animate-pulse">
+                                            <span className="px-2 py-0.5 rounded-full text-[8px] uppercase font-semibold tracking-wide bg-primary/10 text-primary animate-pulse">
                                                 ACTIVE
                                             </span>
                                         )}

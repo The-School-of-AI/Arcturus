@@ -67,6 +67,19 @@ class VoiceSessionLogger:
             self._conversation_history = []
             return self._session_id
 
+    def save_session(self) -> str | None:
+        """
+        Flush the current session to disk WITHOUT clearing history.
+        This preserves conversation context across multiple wake→idle cycles
+        so the user can have multi-turn conversations.
+        Returns the path to the saved JSON file, or None if nothing to save.
+        """
+        with self._lock:
+            if not self._session_id:
+                return None
+            path = self._flush_unlocked()
+            return str(path) if path else None
+
     def end_session(self) -> str | None:
         """
         Close the current session and flush to disk.

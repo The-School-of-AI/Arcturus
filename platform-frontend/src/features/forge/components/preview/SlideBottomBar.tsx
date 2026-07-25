@@ -44,7 +44,6 @@ export function SlideBottomBar({
   }, [fetchThemes]);
 
   // Auto-download: trigger save dialog when export completes.
-  // Uses getState() to avoid double-fire when ExportPanel also handles this.
   useEffect(() => {
     if (!autoDownloadJobId) return;
     if (autoDownloadJobId.artifactId !== artifactId) return;
@@ -59,7 +58,8 @@ export function SlideBottomBar({
 
   const handleDownload = async (job: { id: string; format?: string }) => {
     const url = api.getExportDownloadUrl(artifactId, job.id);
-    const defaultName = `${artifactTitle || 'slides'}.pptx`;
+    const ext = job.format || 'pdf';
+    const defaultName = `${artifactTitle || 'slides'}.${ext}`;
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const electronAPI = (window as any).electronAPI;
@@ -86,52 +86,52 @@ export function SlideBottomBar({
     }
   };
 
-  const handleExport = () => {
-    startExport(artifactId, 'pptx', selectedThemeId, strictLayout || undefined, generateImages || undefined);
+  const handleExport = (format: 'pdf' | 'pptx' = 'pdf') => {
+    startExport(artifactId, format, selectedThemeId, format === 'pptx' ? (strictLayout || undefined) : undefined, format === 'pptx' ? (generateImages || undefined) : undefined);
     setShowExportOptions(false);
   };
 
   const selectedTheme = themes.find((t: { id: string }) => t.id === selectedThemeId);
 
   return (
-    <div className="h-12 border-t border-border/30 bg-charcoal-950/80 flex items-center px-3 gap-3 shrink-0">
+    <div className="h-12 border-t border-border[0.06] bg-[#0a0b0d] flex items-center px-4 gap-3 shrink-0">
       {/* Theme selector */}
       <div className="relative">
         <button
           onClick={() => { setShowThemeDropdown(v => !v); setShowExportOptions(false); }}
-          className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-foreground hover:bg-muted/30 transition-colors"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-colors"
         >
-          <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+          <Palette className="w-3.5 h-3.5" />
           {selectedTheme && (
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full border border-border/40" style={{ backgroundColor: selectedTheme.colors?.primary }} />
-              <div className="w-3 h-3 rounded-full border border-border/40" style={{ backgroundColor: selectedTheme.colors?.accent }} />
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedTheme.colors?.primary }} />
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selectedTheme.colors?.accent }} />
             </div>
           )}
-          <span className="max-w-[120px] truncate">{selectedTheme?.name || selectedThemeId}</span>
+          <span className="max-w-[100px] truncate">{selectedTheme?.name || selectedThemeId}</span>
         </button>
 
         {showThemeDropdown && (
-          <div className="absolute bottom-full left-0 mb-1 w-64 max-h-72 overflow-y-auto rounded-lg border border-border/50 bg-charcoal-900 shadow-xl z-50">
+          <div className="absolute bottom-full left-0 mb-2 w-60 max-h-72 overflow-y-auto rounded-xl border border-border[0.08] bg-[#111215] shadow-sm z-50">
             {themes.map((t: { id: string; name: string; colors?: { primary: string; accent: string; background: string } }) => (
               <button
                 key={t.id}
                 onClick={() => { onThemeChange(t.id); setShowThemeDropdown(false); }}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2 text-left text-xs hover:bg-muted/30 transition-colors',
-                  t.id === selectedThemeId && 'bg-primary/10 text-primary'
+                  'w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs hover:bg-white/[0.04] transition-colors',
+                  t.id === selectedThemeId && 'bg-blue-500/10 text-blue-400'
                 )}
               >
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
                   {[t.colors?.primary, t.colors?.accent, t.colors?.background].filter(Boolean).map((c, ci) => (
-                    <div key={ci} className="w-3 h-3 rounded-full border border-border/40" style={{ backgroundColor: c }} />
+                    <div key={ci} className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: c }} />
                   ))}
                 </div>
-                <span className="truncate">{t.name}</span>
+                <span className={cn('truncate', t.id === selectedThemeId ? 'text-blue-400' : 'text-white/60')}>{t.name}</span>
               </button>
             ))}
             {themes.length === 0 && (
-              <div className="p-3 text-xs text-muted-foreground flex items-center gap-2">
+              <div className="p-3 text-xs text-white/30 flex items-center gap-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> Loading themes...
               </div>
             )}
@@ -143,65 +143,71 @@ export function SlideBottomBar({
       <div className="flex-1" />
 
       {/* Navigation */}
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
+      <div className="flex items-center gap-1.5">
+        <button
+          className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/[0.04] disabled:opacity-30 transition-colors"
           disabled={currentIndex === 0}
           onClick={() => onNavigate(currentIndex - 1)}
         >
           <ChevronLeft className="w-4 h-4" />
-        </Button>
-        <span className="text-xs text-muted-foreground font-mono min-w-[50px] text-center">
+        </button>
+        <span className="text-xs text-white/40 font-mono min-w-[50px] text-center tabular-nums">
           {currentIndex + 1} / {totalSlides}
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
+        <button
+          className="p-1.5 rounded-md text-white/30 hover:text-white/70 hover:bg-white/[0.04] disabled:opacity-30 transition-colors"
           disabled={currentIndex >= totalSlides - 1}
           onClick={() => onNavigate(currentIndex + 1)}
         >
           <ChevronRight className="w-4 h-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
       {/* Export */}
-      <div className="relative flex items-center gap-1">
+      <div className="relative flex items-center gap-1.5">
         <button
           onClick={() => { setShowExportOptions(v => !v); setShowThemeDropdown(false); }}
-          className="p-1 rounded hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-colors"
+          className="p-1.5 rounded-md text-white/30 hover:text-white/60 hover:bg-white/[0.04] transition-colors"
         >
           <Settings2 className="w-3.5 h-3.5" />
         </button>
 
         {showExportOptions && (
-          <div className="absolute bottom-full right-0 mb-1 p-3 rounded-lg border border-border/50 bg-charcoal-900 shadow-xl z-50 space-y-2 w-52">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-              <Switch checked={strictLayout} onCheckedChange={setStrictLayout} />
-              Strict layout
-            </label>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-              <Switch checked={generateImages} onCheckedChange={setGenerateImages} />
-              Generate images (AI)
-            </label>
+          <div className="absolute bottom-full right-0 mb-2 p-3 rounded-xl border border-border[0.08] bg-[#111215] shadow-sm z-50 space-y-2.5 w-52">
+            <button
+              onClick={() => handleExport('pptx')}
+              disabled={isExporting}
+              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+            >
+              <Download className="w-3 h-3" />
+              Export as PPTX
+            </button>
+            <div className="border-t border-border[0.06] pt-2 space-y-2">
+              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
+                <Switch checked={strictLayout} onCheckedChange={setStrictLayout} />
+                Strict layout (PPTX)
+              </label>
+              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer">
+                <Switch checked={generateImages} onCheckedChange={setGenerateImages} />
+                Generate images (PPTX)
+              </label>
+            </div>
           </div>
         )}
 
         <Button
           size="sm"
-          onClick={handleExport}
+          onClick={() => handleExport('pdf')}
           disabled={isExporting}
-          className="h-7 text-xs gap-1.5"
+          className="h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-500 text-white border-0"
         >
           {isExporting ? (
             <><Loader2 className="w-3 h-3 animate-spin" /> Exporting...</>
           ) : (
-            <><Download className="w-3 h-3" /> Export PPTX</>
+            <><Download className="w-3 h-3" /> Export PDF</>
           )}
         </Button>
       </div>

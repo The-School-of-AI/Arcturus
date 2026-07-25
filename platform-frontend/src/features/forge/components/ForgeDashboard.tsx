@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     Hammer, Plus, RefreshCw, CheckCircle, XCircle, ChevronRight, ChevronDown,
     History, FileText, Presentation, Table2, Loader2, AlertCircle,
-    Send, AlertTriangle, Eye, Trash2, RotateCcw
+    Send, AlertTriangle, Eye, Trash2, RotateCcw, Pencil, Palette, Maximize2,
+    Code2, Check
 } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { api } from '@/lib/api';
+import { api, API_BASE } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,7 +17,31 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { ExportPanel } from './ExportPanel';
 import { SlidePreviewModal } from './preview/SlidePreviewModal';
+import { SlideRenderer } from './preview/SlideRenderer';
 import { ArtifactPromptBanner } from './ArtifactPromptBanner';
+import type { SlideTheme } from './preview/renderers';
+import type { Slide } from './preview/normalizers';
+
+/** Default theme used when no theme info is available */
+const DEFAULT_THEME: SlideTheme = {
+    id: 'corporate-blue',
+    name: 'Corporate Blue',
+    colors: {
+        primary: '#1E3A5F',
+        secondary: '#4A7FB5',
+        accent: '#A87A22',
+        background: '#F5F6F8',
+        text: '#1C2D3F',
+        text_light: '#7B8FA3',
+        title_background: '#152C47',
+    },
+    font_heading: 'Calibri',
+    font_body: 'Corbel',
+};
+
+/** Slide render dimensions (SlideFrame uses aspect-[16/9] so 960×540 is the canonical size) */
+const SLIDE_W = 960;
+const SLIDE_H = 540;
 
 // --- Type helpers ---
 
@@ -81,26 +106,649 @@ function JsonTree({ data, depth = 0 }: { data: unknown; depth?: number }) {
     );
 }
 
-// --- Outline tree viewer ---
+// --- Editable Outline tree viewer ---
 
-function OutlineTree({ items }: { items: any[] }) {
+interface OutlineEdit {
+    title?: string;
+    description?: string;
+}
+
+/** Flatten outline items to get a global index for slide mapping.
+ *  Only LEAF items (no children) map to actual slides.
+ *  Parent items with children are section headers — they don't get slides.
+ */
+function flattenOutlineIds(items: any[]): string[] {
+    const flat: string[] = [];
+    const walk = (list: any[]) => {
+        for (const item of list) {
+            if (item.children?.length) {
+                // Parent/section header — skip, recurse into children
+                walk(item.children);
+            } else {
+                // Leaf item — maps to an actual slide
+                flat.push(item.id);
+            }
+        }
+    };
+    walk(items);
+    return flat;
+}
+
+function EditableOutlineTree({
+    items,
+    edits,
+    onEdit,
+    editable,
+    slides,
+    theme,
+    artifact,
+    depth = 0,
+    rootFlatItems,
+}: {
+    items: any[];
+    edits: Record<string, OutlineEdit>;
+    onEdit: (id: string, field: 'title' | 'description', value: string) => void;
+    editable: boolean;
+    slides?: Slide[];
+    theme: SlideTheme;
+    artifact: any;
+    depth?: number;
+    /** Global flat leaf-item IDs — computed once at root, passed to all children. */
+    rootFlatItems?: string[];
+}) {
+    // Compute global flat list only at root level (depth 0), reuse for children
+    const flatItems = useMemo(
+        () => rootFlatItems ?? flattenOutlineIds(items || []),
+        [rootFlatItems, items],
+    );
+
     if (!items?.length) return <span className="text-muted-foreground text-xs italic">No outline items</span>;
 
     return (
-        <div className="space-y-2">
-            {items.map((item: any) => (
-                <div key={item.id} className="border-l-2 border-primary/30 pl-3 min-w-0">
-                    <p className="text-sm font-medium text-foreground break-words">{item.title}</p>
-                    {item.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 break-words">{item.description}</p>
+        <div className="space-y-4">
+            {items.map((item: any) => {
+                const globalIdx = flatItems.indexOf(item.id);
+                const slide = slides && globalIdx >= 0 ? slides[globalIdx] : undefined;
+                const editData = edits[item.id];
+
+                return (
+                    <OutlineItemWithSlide
+                        key={item.id}
+                        item={item}
+                        editData={editData}
+                        onEdit={onEdit}
+                        editable={editable}
+                        slide={slide}
+                        slideIndex={globalIdx}
+                        totalSlides={slides?.length ?? 0}
+                        theme={theme}
+                        artifact={artifact}
+                        depth={depth}
+                    >
+                        {item.children?.length > 0 && (
+                            <div className="ml-4 mt-2">
+                                <EditableOutlineTree
+                                    items={item.children}
+                                    edits={edits}
+                                    onEdit={onEdit}
+                                    editable={editable}
+                                    slides={slides}
+                                    theme={theme}
+                                    artifact={artifact}
+                                    depth={depth + 1}
+                                    rootFlatItems={flatItems}
+                                />
+                            </div>
+                        )}
+                    </OutlineItemWithSlide>
+                );
+            })}
+        </div>
+    );
+}
+
+// --- Helper: extract text content from a slide element ---
+function getElementText(el: any): string {
+    if (typeof el.content === 'string') return el.content;
+    if (Array.isArray(el.content)) {
+        // Bullet lists, etc. — join items
+        return el.content.map((item: any) => (typeof item === 'string' ? item : item?.text || JSON.stringify(item))).join('\n');
+    }
+    if (typeof el.content === 'object' && el.content !== null) {
+        return JSON.stringify(el.content);
+    }
+    return '';
+}
+
+// --- Single outline item with inline slide preview + edit ---
+
+function OutlineItemWithSlide({
+    item,
+    editData,
+    onEdit,
+    editable,
+    slide,
+    slideIndex,
+    totalSlides,
+    theme,
+    artifact,
+    depth,
+    children,
+}: {
+    item: any;
+    editData?: OutlineEdit;
+    onEdit: (id: string, field: 'title' | 'description', value: string) => void;
+    editable: boolean;
+    slide?: Slide;
+    slideIndex: number;
+    totalSlides: number;
+    theme: SlideTheme;
+    artifact: any;
+    depth: number;
+    children?: React.ReactNode;
+}) {
+    const [aiEditOpen, setAiEditOpen] = useState(false);
+    const [textEditOpen, setTextEditOpen] = useState(false);
+    const [htmlEditOpen, setHtmlEditOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'html' | 'text' | 'ai'>('html');
+    const [editInstruction, setEditInstruction] = useState('');
+    const [editLoading, setEditLoading] = useState(false);
+    const [directEdits, setDirectEdits] = useState<Record<string, string>>({});
+    const [savingDirect, setSavingDirect] = useState(false);
+    const [htmlDraft, setHtmlDraft] = useState('');
+    const [htmlSaving, setHtmlSaving] = useState(false);
+    const [htmlSaved, setHtmlSaved] = useState(false);
+    const applyEditInstruction = useAppStore(s => s.applyEditInstruction);
+    const patchSlideContent = useAppStore(s => s.patchSlideContent);
+    const loadArtifact = useAppStore(s => s.loadArtifact);
+
+    // Sync HTML draft when slide changes
+    useEffect(() => {
+        setHtmlDraft(slide?.html || '');
+        setHtmlSaved(false);
+    }, [slide?.id, slide?.html]);
+
+    const handleHtmlSave = useCallback(async () => {
+        if (!slide || htmlDraft === (slide.html || '')) return;
+        setHtmlSaving(true);
+        try {
+            await patchSlideContent(artifact.id, { [slideIndex]: { html: htmlDraft } }, artifact.revision_head_id);
+            setHtmlSaved(true);
+            setTimeout(() => setHtmlSaved(false), 2000);
+            await loadArtifact(artifact.id);
+        } catch (e: any) {
+            console.error('HTML save failed', e);
+        } finally {
+            setHtmlSaving(false);
+        }
+    }, [slide, slideIndex, htmlDraft, artifact, patchSlideContent, loadArtifact]);
+
+    // Measure container for responsive slide scaling
+    const slideContainerRef = useRef<HTMLDivElement>(null);
+    const [containerWidth, setContainerWidth] = useState(0);
+    useEffect(() => {
+        const el = slideContainerRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) setContainerWidth(entry.contentRect.width);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    // Reset direct edits when slide changes
+    useEffect(() => {
+        setDirectEdits({});
+    }, [slide?.id]);
+
+    const handleAiEdit = useCallback(async () => {
+        if (!editInstruction.trim() || !slide) return;
+        setEditLoading(true);
+        const prefix = `On slide ${slideIndex + 1} (${slide.slide_type}, title: '${slide.title || 'untitled'}'): `;
+        try {
+            await applyEditInstruction(artifact.id, prefix + editInstruction.trim(), artifact.revision_head_id);
+            const { editError: err, editConflict: conflict } = useAppStore.getState();
+            if (!err && !conflict) {
+                setEditInstruction('');
+                setAiEditOpen(false);
+                await loadArtifact(artifact.id);
+            }
+        } finally {
+            setEditLoading(false);
+        }
+    }, [editInstruction, slide, slideIndex, artifact, applyEditInstruction, loadArtifact]);
+
+    const handleDirectSave = useCallback(async () => {
+        if (!slide || Object.keys(directEdits).length === 0) return;
+        setSavingDirect(true);
+        try {
+            await patchSlideContent(artifact.id, { [slideIndex]: directEdits }, artifact.revision_head_id);
+            const { editError: err, editConflict: conflict } = useAppStore.getState();
+            if (!err && !conflict) {
+                setDirectEdits({});
+                setTextEditOpen(false);
+                await loadArtifact(artifact.id);
+            }
+        } finally {
+            setSavingDirect(false);
+        }
+    }, [slide, slideIndex, directEdits, artifact, patchSlideContent, loadArtifact]);
+
+    const displayTitle = editData?.title ?? item.title;
+    // Clean description: strip outline metadata (slide_type, headline_text, etc.)
+    const rawDesc = editData?.description ?? item.description;
+    const displayDesc = useMemo(() => {
+        if (!rawDesc) return rawDesc;
+        // If description contains metadata fields, extract just the meaningful parts
+        if (/^slide_type:/m.test(rawDesc) || /\bheadline_text:/m.test(rawDesc)) {
+            const parts: string[] = [];
+            const supportingMatch = rawDesc.match(/supporting_text:\s*(.+?)(?:\n|$)/);
+            if (supportingMatch) parts.push(supportingMatch[1].trim());
+            const speakerMatch = rawDesc.match(/speaker_notes:\s*'([^']+)'/);
+            if (speakerMatch) parts.push(speakerMatch[1].trim());
+            if (parts.length > 0) return parts[0];
+            // Fallback: strip known metadata prefixes and return what's left
+            return rawDesc
+                .replace(/slide_type:\s*\w+\s*/gi, '')
+                .replace(/headline_text:\s*[^\n]+/gi, '')
+                .replace(/visual_description:\s*[^\n]+/gi, '')
+                .replace(/color_scheme:\s*[^\n]+/gi, '')
+                .replace(/suggested_svg_elements:\s*[^\n]+/gi, '')
+                .replace(/supporting_text:\s*/gi, '')
+                .replace(/speaker_notes:\s*'[^']*'/gi, '')
+                .trim() || rawDesc;
+        }
+        // Simple trailing slide_type strip
+        return rawDesc.replace(/\.\s*slide_type:\s*\w+\s*$/i, '.').replace(/\s*slide_type:\s*\w+\s*$/i, '').trim() || rawDesc;
+    }, [rawDesc]);
+
+    // Text elements for direct editing (structured slides)
+    const textElements = useMemo(() => {
+        if (!slide?.elements) return [];
+        return slide.elements
+            .map((el, i) => ({ idx: i, type: el.type, content: getElementText(el) }))
+            .filter(e => e.content.length > 0 && e.type !== 'image');
+    }, [slide?.elements]);
+
+    // Extract visible text parts from HTML for the Text tab (HTML slides)
+    const htmlTextParts = useMemo(() => {
+        const src = htmlDraft || slide?.html;
+        if (!src) return [];
+        const parts: { tag: string; text: string; index: number }[] = [];
+        // Parse text content from common HTML text elements
+        const tagRegex = /<(h[1-6]|p|span|li|td|th|a|strong|em|b|i|div|button|label)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+        let match;
+        let idx = 0;
+        while ((match = tagRegex.exec(src)) !== null) {
+            // Strip inner tags to get plain text
+            const inner = match[2].replace(/<[^>]+>/g, '').trim();
+            if (inner.length > 0) {
+                parts.push({ tag: match[1].toLowerCase(), text: inner, index: idx++ });
+            }
+        }
+        return parts;
+    }, [htmlDraft, slide?.html]);
+
+    return (
+        <div className="border-l-2 border-primary/30 pl-3 min-w-0">
+            {/* Outline item header */}
+            <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground/60 font-mono mt-0.5 shrink-0">
+                    {slideIndex >= 0 ? `${slideIndex + 1}.` : ''}
+                </span>
+                <div className="flex-1 min-w-0">
+                    {editable ? (
+                        <input
+                            className="w-full text-sm font-medium text-foreground bg-transparent border-b border-dashed border-border/50 focus:border-primary/60 outline-none py-0.5 break-words"
+                            value={displayTitle}
+                            onChange={e => onEdit(item.id, 'title', e.target.value)}
+                            placeholder="Slide title..."
+                        />
+                    ) : (
+                        <p className="text-sm font-medium text-foreground break-words">{displayTitle}</p>
                     )}
-                    {item.children?.length > 0 && (
-                        <div className="ml-2 mt-1">
-                            <OutlineTree items={item.children} />
-                        </div>
+                    {(editable || displayDesc) && (
+                        editable ? (
+                            <textarea
+                                className="w-full text-xs text-muted-foreground bg-transparent border-b border-dashed border-border/30 focus:border-primary/40 outline-none mt-0.5 resize-none break-words"
+                                value={displayDesc || ''}
+                                onChange={e => onEdit(item.id, 'description', e.target.value)}
+                                placeholder="Description..."
+                                rows={1}
+                            />
+                        ) : (
+                            displayDesc && <p className="text-xs text-muted-foreground mt-0.5 break-words line-clamp-4">{displayDesc}</p>
+                        )
                     )}
                 </div>
-            ))}
+            </div>
+
+            {/* Inline slide preview — split layout: slide left, editor right */}
+            {(() => {
+                const editorOpen = (htmlEditOpen || textEditOpen || aiEditOpen) && !!slide;
+                const previewW = editorOpen && containerWidth > 0 ? Math.floor(containerWidth * 0.5) : containerWidth;
+                const previewScale = containerWidth > 0 ? previewW / SLIDE_W : 1;
+                const previewH = Math.round(SLIDE_H * previewScale);
+                return (
+                    <div ref={slideContainerRef} className={cn("mt-2 mb-1 w-full", editorOpen && "flex gap-2")}>
+                        {/* Left: slide preview */}
+                        {slide && containerWidth > 0 && (() => {
+                            return (
+                                <div
+                                    className={editorOpen ? "w-1/2 shrink-0" : "w-full"}
+                                >
+                                    <div
+                                        style={{
+                                            width: '100%',
+                                            height: previewH,
+                                            overflow: 'hidden',
+                                            position: 'relative',
+                                            borderRadius: 8,
+                                            border: '1px solid rgba(128,128,128,0.15)',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: SLIDE_W,
+                                                height: SLIDE_H,
+                                                transform: `scale(${previewScale})`,
+                                                transformOrigin: 'top left',
+                                                pointerEvents: 'none',
+                                            }}
+                                        >
+                                            <SlideRenderer
+                                                slide={slide}
+                                                theme={theme}
+                                                slideIndex={slideIndex}
+                                                totalSlides={totalSlides}
+                                                imageBaseUrl={`${API_BASE}/studio/${artifact.id}/images`}
+                                            />
+                                        </div>
+                                        {/* Code2 button — bottom right of slide preview */}
+                                        <button
+                                            onClick={() => {
+                                                const opening = !htmlEditOpen && !textEditOpen && !aiEditOpen;
+                                                if (opening) {
+                                                    const defaultTab = slide.html ? 'html' : 'text';
+                                                    setHtmlEditOpen(true); setTextEditOpen(false); setAiEditOpen(false); setActiveTab(defaultTab);
+                                                } else {
+                                                    setHtmlEditOpen(false); setTextEditOpen(false); setAiEditOpen(false);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md backdrop-blur-sm border font-mono text-xs font-semibold transition-all duration-150 shadow-sm",
+                                                editorOpen
+                                                    ? "bg-orange-500 border-orange-400 text-white"
+                                                    : "bg-black/70 border-border text-white/70 hover:text-orange-400 hover:border-orange-400/50 hover:bg-black/80"
+                                            )}
+                                            style={{ zIndex: 10, pointerEvents: 'auto' }}
+                                            title={slide.html ? "Edit slide" : "Edit slide"}
+                                        >
+                                            {slide.html ? (
+                                                <><Code2 className="w-3.5 h-3.5" /><span>&lt;/&gt;</span></>
+                                            ) : (
+                                                <><Pencil className="w-3 h-3" /><span>Edit</span></>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Right: 3-tab editor panel — matches slide height */}
+                        {editorOpen && slide && (
+                            <div className="w-1/2 rounded-lg border border-border/30 bg-muted/10 overflow-hidden flex flex-col" style={{ height: previewH }}>
+                                {/* Tab bar */}
+                                <div className="flex border-b border-border/20 shrink-0">
+                                    {slide.html && (
+                                        <button
+                                            onClick={() => setActiveTab('html')}
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 -mb-px",
+                                                activeTab === 'html'
+                                                    ? "border-orange-400 text-orange-400"
+                                                    : "border-transparent text-muted-foreground hover:text-foreground"
+                                            )}
+                                        >
+                                            <Code2 className="w-3 h-3" /> HTML
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setActiveTab('text')}
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 -mb-px",
+                                            activeTab === 'text'
+                                                ? "border-emerald-400 text-emerald-400"
+                                                : "border-transparent text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        <FileText className="w-3 h-3" /> Text
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('ai')}
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-3 py-2 text-[11px] font-medium transition-colors border-b-2 -mb-px",
+                                            activeTab === 'ai'
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        <Pencil className="w-3 h-3" /> AI Edit
+                                    </button>
+                                    {/* Save/Reset buttons inline with tabs */}
+                                    {activeTab === 'html' && slide.html && (
+                                        <div className="ml-auto flex items-center gap-2 px-2">
+                                            {htmlDraft !== (slide.html || '') && (
+                                                <button
+                                                    onClick={() => { setHtmlDraft(slide.html || ''); setHtmlSaved(false); }}
+                                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    Reset
+                                                </button>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                onClick={handleHtmlSave}
+                                                disabled={htmlSaving || htmlDraft === (slide.html || '')}
+                                                className="h-6 text-xs px-2.5 bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-40"
+                                            >
+                                                {htmlSaving ? (
+                                                    <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Saving...</>
+                                                ) : htmlSaved ? (
+                                                    <><Check className="w-3 h-3 mr-1" /> Saved</>
+                                                ) : (
+                                                    'Save'
+                                                )}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Tab content — scrollable */}
+                                <div className="flex-1 overflow-auto min-h-0">
+                                    {/* HTML tab — syntax highlighted editor */}
+                                    {activeTab === 'html' && slide.html && (() => {
+                                        // Shared text styles — identical on pre and textarea to prevent layout drift
+                                        const sharedStyle: React.CSSProperties = {
+                                            margin: 0,
+                                            border: 0,
+                                            background: 'none',
+                                            boxSizing: 'border-box',
+                                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                                            fontSize: '11px',
+                                            fontWeight: 400,
+                                            lineHeight: '1.6',
+                                            letterSpacing: 'normal',
+                                            whiteSpace: 'pre-wrap',
+                                            overflowWrap: 'break-word',
+                                            wordBreak: 'keep-all',
+                                            padding: '12px',
+                                            tabSize: 2,
+                                        };
+                                        const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                        const highlighted = htmlDraft.replace(
+                                            /<!--[\s\S]*?-->|<\/?[\w-]+(?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*\/?>|[^<]+/g,
+                                            (match) => {
+                                                if (match.startsWith('<!--')) {
+                                                    return `<span style="color:#6a737d;font-style:italic">${esc(match)}</span>`;
+                                                }
+                                                if (match.startsWith('<')) {
+                                                    return match.replace(
+                                                        /(<\/?)([\w-]+)((?:\s+[\w-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*))?)*\s*)(\/?>)/g,
+                                                        (_m, open, tag, attrs, close) => {
+                                                            const coloredAttrs = attrs.replace(
+                                                                /([\w-]+)(\s*=\s*)("[^"]*"|'[^']*')/g,
+                                                                (_a: string, name: string, eq: string, val: string) =>
+                                                                    `<span style="color:#9cdcfe">${esc(name)}</span><span style="color:#cdd6f4">${esc(eq)}</span><span style="color:#ce9178">${esc(val)}</span>`
+                                                            );
+                                                            return `<span style="color:#808080">${esc(open)}</span><span style="color:#4ec9b0">${esc(tag)}</span>${coloredAttrs}<span style="color:#808080">${esc(close)}</span>`;
+                                                        }
+                                                    );
+                                                }
+                                                return `<span style="color:#f0f0f0">${esc(match)}</span>`;
+                                            }
+                                        );
+                                        return (
+                                            <div
+                                                className="h-full overflow-auto"
+                                                style={{ background: '#1e1e2e' }}
+                                            >
+                                                {/* Container: pre drives layout, textarea overlays */}
+                                                <div style={{ position: 'relative', minHeight: '100%' }}>
+                                                    {/* Highlighted layer — flows naturally, determines scroll height */}
+                                                    <pre
+                                                        style={{ ...sharedStyle, position: 'relative', pointerEvents: 'none', color: 'transparent' }}
+                                                        aria-hidden="true"
+                                                        dangerouslySetInnerHTML={{ __html: highlighted + '\n' }}
+                                                    />
+                                                    {/* Editable textarea — absolute overlay, no own scroll */}
+                                                    <textarea
+                                                        value={htmlDraft}
+                                                        onChange={e => { setHtmlDraft(e.target.value); setHtmlSaved(false); }}
+                                                        spellCheck={false}
+                                                        className="focus:outline-none"
+                                                        style={{
+                                                            ...sharedStyle,
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            resize: 'none',
+                                                            overflow: 'hidden',
+                                                            color: 'transparent',
+                                                            caretColor: '#f0f0f0',
+                                                            WebkitTextFillColor: 'transparent',
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Text tab */}
+                                    {activeTab === 'text' && (
+                                        <div className="p-3 space-y-2 overflow-auto">
+                                            {slide.html ? (
+                                                /* HTML slide: extract text parts and allow inline editing */
+                                                <>
+                                                    {htmlTextParts.length === 0 && (
+                                                        <p className="text-xs text-muted-foreground italic">No editable text found in this slide.</p>
+                                                    )}
+                                                    {htmlTextParts.map((part) => (
+                                                        <div key={part.index}>
+                                                            <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                                                                &lt;{part.tag}&gt;
+                                                            </label>
+                                                            <input
+                                                                className="w-full text-xs text-foreground bg-transparent border-b border-border/50 focus:border-primary/60 outline-none py-1"
+                                                                defaultValue={part.text}
+                                                                onBlur={e => {
+                                                                    const newText = e.target.value;
+                                                                    if (newText !== part.text) {
+                                                                        // Replace the text in the HTML draft
+                                                                        setHtmlDraft(prev => prev.replace(part.text, newText));
+                                                                        setHtmlSaved(false);
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                    {htmlTextParts.length > 0 && htmlDraft !== (slide.html || '') && (
+                                                        <p className="text-xs text-orange-400/70 italic">Text changes applied to HTML. Use Save on HTML tab to persist.</p>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                /* Structured slide: edit elements directly */
+                                                <>
+                                                    <div>
+                                                        <label className="text-xs text-muted-foreground uppercase tracking-wider">Title</label>
+                                                        <input
+                                                            className="w-full text-xs text-foreground bg-transparent border-b border-border/50 focus:border-primary/60 outline-none py-1"
+                                                            value={directEdits.title ?? slide.title ?? ''}
+                                                            onChange={e => setDirectEdits(prev => ({ ...prev, title: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    {textElements.map(el => {
+                                                        const key = `element_${el.idx}_content`;
+                                                        return (
+                                                            <div key={key}>
+                                                                <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                                                                    {el.type}
+                                                                </label>
+                                                                <textarea
+                                                                    className="w-full text-xs text-foreground bg-transparent border border-border/30 rounded p-1.5 focus:border-primary/60 outline-none resize-none"
+                                                                    value={directEdits[key] ?? el.content}
+                                                                    onChange={e => setDirectEdits(prev => ({ ...prev, [key]: e.target.value }))}
+                                                                    rows={Math.min(4, el.content.split('\n').length + 1)}
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-7 px-3 text-xs w-full"
+                                                        onClick={handleDirectSave}
+                                                        disabled={savingDirect || Object.keys(directEdits).length === 0}
+                                                    >
+                                                        {savingDirect ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <CheckCircle className="w-3 h-3 mr-1" />}
+                                                        Save Text Changes
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* AI tab */}
+                                    {activeTab === 'ai' && (
+                                        <div className="p-3">
+                                            <div className="flex gap-2 items-start">
+                                                <Input
+                                                    value={editInstruction}
+                                                    onChange={e => setEditInstruction(e.target.value)}
+                                                    placeholder="e.g. Make it more visual, add a chart..."
+                                                    className="text-xs h-8 flex-1"
+                                                    onKeyDown={e => e.key === 'Enter' && handleAiEdit()}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    className="h-8 px-3 text-xs"
+                                                    onClick={handleAiEdit}
+                                                    disabled={editLoading || !editInstruction.trim()}
+                                                >
+                                                    {editLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {children}
         </div>
     );
 }
@@ -112,12 +760,13 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
     const isGenerating = useAppStore(s => s.isGenerating);
 
     const [type, setType] = useState<'slides' | 'documents' | 'sheets'>('slides');
+    const [slideMode, setSlideMode] = useState<'artistic' | 'business'>('artistic');
     const [title, setTitle] = useState('');
     const [prompt, setPrompt] = useState('');
 
     const handleCreate = async () => {
         if (!prompt.trim()) return;
-        await createArtifact(type, prompt, title || undefined);
+        await createArtifact(type, prompt, title || undefined, type === 'slides' ? slideMode : undefined);
         setTitle('');
         setPrompt('');
         onOpenChange(false);
@@ -155,6 +804,45 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                         })}
                     </div>
 
+                    {/* Slide mode selector — only for slides */}
+                    {type === 'slides' && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Slide style</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => setSlideMode('artistic')}
+                                    className={cn(
+                                        "flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 text-left",
+                                        slideMode === 'artistic'
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    <Palette className="w-4 h-4 shrink-0" />
+                                    <div>
+                                        <div className="text-sm font-medium">Artistic</div>
+                                        <div className="text-xs opacity-70">Rich HTML, creative layouts</div>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => setSlideMode('business')}
+                                    className={cn(
+                                        "flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 text-left",
+                                        slideMode === 'business'
+                                            ? "border-primary bg-primary/10 text-primary"
+                                            : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    <Presentation className="w-4 h-4 shrink-0" />
+                                    <div>
+                                        <div className="text-sm font-medium">Business</div>
+                                        <div className="text-xs opacity-70">Clean templates, PPTX-optimized</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Quick-start templates */}
                     <div className="space-y-2">
                         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Quick start</label>
@@ -185,7 +873,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g., Q4 Sales Report"
                             disabled={isGenerating}
-                            className="bg-white/[0.06] border-white/[0.15]"
+                            className="bg-white/[0.06] border-border[0.15]"
                         />
                     </div>
 
@@ -199,7 +887,7 @@ function CreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
                             onChange={e => setPrompt(e.target.value)}
                             placeholder="Describe the content you want to generate..."
                             rows={5}
-                            className="text-sm bg-white/[0.06] border-white/[0.15]"
+                            className="text-sm bg-white/[0.06] border-border[0.15]"
                             disabled={isGenerating}
                         />
                     </div>
@@ -270,9 +958,62 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
         }
     };
 
+    const [outlineEdits, setOutlineEdits] = useState<Record<string, OutlineEdit>>({});
+    const [themeInstruction, setThemeInstruction] = useState('');
+    const [themeLoading, setThemeLoading] = useState(false);
+
     const meta = TYPE_META[artifact.type] || TYPE_META.document;
     const Icon = meta.icon;
     const outlineStatus = artifact.outline?.status;
+
+    // Resolve theme
+    const studioThemes = useAppStore(s => s.studioThemes);
+    const resolvedTheme: SlideTheme = useMemo(() => {
+        if (artifact.theme_id && studioThemes?.length) {
+            const found = studioThemes.find((t: any) => t.id === artifact.theme_id);
+            if (found) return found;
+        }
+        // Fall back to LLM-generated custom theme stored on artifact
+        if (artifact.custom_theme && typeof artifact.custom_theme === 'object' && artifact.custom_theme.colors) {
+            return artifact.custom_theme as SlideTheme;
+        }
+        return DEFAULT_THEME;
+    }, [artifact.theme_id, artifact.custom_theme, studioThemes]);
+
+    const slides: Slide[] = useMemo(() => {
+        return artifact.content_tree?.slides ?? [];
+    }, [artifact.content_tree?.slides]);
+
+    const handleOutlineEdit = useCallback((id: string, field: 'title' | 'description', value: string) => {
+        setOutlineEdits(prev => ({
+            ...prev,
+            [id]: { ...prev[id], [field]: value },
+        }));
+    }, []);
+
+    const handleApproveWithEdits = useCallback(async () => {
+        const modifications = Object.keys(outlineEdits).length > 0 ? { items: outlineEdits } : undefined;
+        await approveOutline(artifact.id, modifications);
+    }, [approveOutline, artifact.id, outlineEdits]);
+
+    const handleApplyTheme = useCallback(async () => {
+        if (!themeInstruction.trim()) return;
+        setThemeLoading(true);
+        try {
+            await applyEditInstruction(
+                artifact.id,
+                `Global theme change: ${themeInstruction.trim()}. Do not change slide content, only adjust colors, fonts, and styling.`,
+                artifact.revision_head_id
+            );
+            const { editError: err, editConflict: conflict } = useAppStore.getState();
+            if (!err && !conflict) {
+                setThemeInstruction('');
+                await loadArtifact(artifact.id);
+            }
+        } finally {
+            setThemeLoading(false);
+        }
+    }, [themeInstruction, artifact, applyEditInstruction, loadArtifact]);
 
     useEffect(() => {
         let cancelled = false;
@@ -306,34 +1047,84 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-sm text-muted-foreground capitalize">{artifact.type}</span>
                             {outlineStatus && (
-                                <Badge variant="outline" className={cn("text-[10px] uppercase font-bold", STATUS_STYLE[outlineStatus])}>
+                                <Badge variant="outline" className={cn("text-xs uppercase font-bold", STATUS_STYLE[outlineStatus])}>
                                     {outlineStatus}
                                 </Badge>
                             )}
                         </div>
                         {artifact.updated_at && (
-                            <span className="text-[10px] text-muted-foreground/60 mt-1 block">
+                            <span className="text-xs text-muted-foreground/60 mt-1 block">
                                 Updated {formatDistanceToNow(new Date(artifact.updated_at), { addSuffix: true })}
                             </span>
                         )}
                     </div>
+                    {/* Slideshow button in header */}
+                    {artifact.type === 'slides' && artifact.content_tree && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPreviewOpen(true)}
+                            className="shrink-0 gap-1.5 h-8 text-xs"
+                        >
+                            <Maximize2 className="w-3.5 h-3.5" />
+                            Slideshow
+                        </Button>
+                    )}
                 </div>
 
                 <ArtifactPromptBanner key={artifact.id} prompt={artifact.creation_prompt} />
 
+                {/* Global Theme Bar (only when content exists) */}
+                {artifact.content_tree && artifact.type === 'slides' && (
+                    <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Palette className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Theme</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <Input
+                                value={themeInstruction}
+                                onChange={e => setThemeInstruction(e.target.value)}
+                                placeholder="Dark mode, tech style, investor deck, change fonts..."
+                                className="text-xs h-8 flex-1"
+                                onKeyDown={e => e.key === 'Enter' && handleApplyTheme()}
+                            />
+                            <Button
+                                size="sm"
+                                className="h-8 px-3 text-xs gap-1.5"
+                                onClick={handleApplyTheme}
+                                disabled={themeLoading || !themeInstruction.trim()}
+                            >
+                                {themeLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Palette className="w-3 h-3" />}
+                                Apply
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Outline Section */}
                 {artifact.outline && (
                     <div className="space-y-3">
-                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Outline</h3>
+                        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                            Outline {outlineStatus === 'pending' && <span className="text-xs text-primary/60 font-normal ml-1">(editable)</span>}
+                        </h3>
                         <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-                            <OutlineTree items={artifact.outline.items || []} />
+                            <EditableOutlineTree
+                                items={artifact.outline.items || []}
+                                edits={outlineEdits}
+                                onEdit={handleOutlineEdit}
+                                editable={outlineStatus === 'pending'}
+                                slides={slides.length > 0 ? slides : undefined}
+                                theme={resolvedTheme}
+                                artifact={artifact}
+                            />
                         </div>
 
                         {/* Approve / Reject */}
                         {outlineStatus === 'pending' && (
                             <div className="flex gap-2">
                                 <Button
-                                    onClick={() => approveOutline(artifact.id)}
+                                    onClick={handleApproveWithEdits}
                                     disabled={isApproving}
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                 >
@@ -342,7 +1133,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                     ) : (
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                     )}
-                                    Approve
+                                    {Object.keys(outlineEdits).length > 0 ? 'Approve with Changes' : 'Approve & Generate'}
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -503,11 +1294,11 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             <p className="text-xs font-medium text-foreground truncate">
                                                 {rev.change_summary}
                                                 {rev.id === artifact.revision_head_id && (
-                                                    <span className="ml-1.5 text-[9px] text-green-400/70 font-normal">(current)</span>
+                                                    <span className="ml-1.5 text-2xs text-green-400/70 font-normal">(current)</span>
                                                 )}
                                             </p>
                                             {rev.created_at && (
-                                                <span className="text-[10px] text-muted-foreground">
+                                                <span className="text-xs text-muted-foreground">
                                                     {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true })}
                                                 </span>
                                             )}
@@ -524,7 +1315,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             {expandedRevisionData.diff?.highlights && expandedRevisionData.diff.highlights.length > 0 && (
                                                 <div className="space-y-1">
                                                     {expandedRevisionData.diff.highlights.map((h: any, i: number) => (
-                                                        <div key={i} className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                        <div key={i} className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <span className="font-mono bg-muted/50 px-1 rounded">{h.kind}</span>
                                                             <span>{h.change}</span>
                                                         </div>
@@ -533,7 +1324,7 @@ function ArtifactDetail({ artifact }: { artifact: any }) {
                                             )}
                                             {expandedRevisionData.diff?.paths && expandedRevisionData.diff.paths.length > 0 && (
                                                 <div className="overflow-x-auto">
-                                                    <table className="text-[10px] w-full">
+                                                    <table className="text-xs w-full">
                                                         <thead>
                                                             <tr className="text-muted-foreground">
                                                                 <th className="text-left pr-2">Path</th>
@@ -591,6 +1382,8 @@ export function ForgeDashboard() {
     const fetchArtifacts = useAppStore(s => s.fetchArtifacts);
     const deleteArtifact = useAppStore(s => s.deleteArtifact);
     const clearAllArtifacts = useAppStore(s => s.clearAllArtifacts);
+    const isSidebarSubPanelOpen = useAppStore(s => s.isSidebarSubPanelOpen);
+    const showArtifactList = isSidebarSubPanelOpen;
 
     const [createOpen, setCreateOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -611,8 +1404,11 @@ export function ForgeDashboard() {
 
     return (
         <div className="flex h-full w-full overflow-hidden">
-            {/* Left Pane — Artifact List */}
-            <div className="w-80 border-r border-border/50 flex flex-col shrink-0">
+            {/* Left Pane — Artifact List (toggle via nav rail click) */}
+            <div className={cn(
+                "border-r border-border/50 flex flex-col shrink-0 transition-all duration-200 overflow-hidden",
+                showArtifactList ? "w-80" : "w-0 border-r-0"
+            )}>
                 {/* Toolbar */}
                 <div className="p-3 border-b border-border/50 flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-2 flex-1">
@@ -682,48 +1478,66 @@ export function ForgeDashboard() {
                             const Icon = meta.icon;
                             const isActive = activeArtifactId === a.id;
                             const outlineStatus = a.outline?.status;
+                            // Detect mode from slide_mode field (returned by list API)
+                            const isBusinessMode = a.type === 'slides' && a.slide_mode === 'business';
 
                             return (
                                 <div
                                     key={a.id}
                                     className={cn(
-                                        "group w-full text-left px-3 py-2.5 rounded-lg transition-all duration-200 flex items-start gap-2.5 cursor-pointer",
+                                        "group w-full text-left px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer",
                                         isActive
                                             ? "bg-primary/10 border border-primary/30"
                                             : "hover:bg-muted/50 border border-transparent"
                                     )}
                                     onClick={() => setActiveArtifactId(a.id)}
                                 >
-                                    <Icon className={cn("w-4 h-4 mt-0.5 shrink-0", meta.color)} />
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2.5">
+                                        <Icon className={cn("w-4 h-4 shrink-0", meta.color)} />
                                         <p className={cn(
-                                            "text-sm font-medium truncate",
+                                            "text-sm font-medium truncate flex-1 min-w-0",
                                             isActive ? "text-primary" : "text-foreground"
                                         )}>
                                             {a.title || 'Untitled'}
                                         </p>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
-                                            {outlineStatus && (
-                                                <span className={cn(
-                                                    "px-1 py-0 rounded text-[8px] uppercase font-bold tracking-tighter",
-                                                    STATUS_STYLE[outlineStatus]
-                                                )}>
-                                                    {outlineStatus}
-                                                </span>
-                                            )}
-                                        </div>
+                                        <button
+                                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-all shrink-0"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteTarget({ id: a.id, title: a.title || 'Untitled' });
+                                            }}
+                                            title="Delete artifact"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
                                     </div>
-                                    <button
-                                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-all shrink-0 mt-0.5"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDeleteTarget({ id: a.id, title: a.title || 'Untitled' });
-                                        }}
-                                        title="Delete artifact"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    <div className="flex items-center gap-1.5 mt-1 ml-6.5 pl-0.5">
+                                        <span className="text-xs text-muted-foreground capitalize">{a.type}</span>
+                                        {a.type === 'slides' && (
+                                            <span className={cn(
+                                                "px-1.5 py-0 rounded-full text-[8px] font-semibold",
+                                                isBusinessMode
+                                                    ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                                    : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                            )}>
+                                                {isBusinessMode ? 'Business' : 'Artistic'}
+                                            </span>
+                                        )}
+                                        <span className="flex-1" />
+                                        {outlineStatus && (
+                                            <span className={cn(
+                                                "px-1.5 py-0 rounded-full text-[8px] uppercase font-bold tracking-tight",
+                                                STATUS_STYLE[outlineStatus]
+                                            )}>
+                                                {outlineStatus}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {a.created_at && (
+                                        <p className="text-2xs text-muted-foreground/40 mt-0.5 ml-6.5 pl-0.5">
+                                            {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                                        </p>
+                                    )}
                                 </div>
                             );
                         })}

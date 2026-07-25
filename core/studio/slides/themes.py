@@ -598,3 +598,138 @@ def get_theme_ids(include_variants: bool = False) -> list[str]:
             for seed in range(1, _VARIANTS_PER_BASE + 1):
                 ids.append(f"{tid}--v{seed:02d}")
     return ids
+
+
+def get_theme_catalog_for_prompt() -> str:
+    """Return a compact theme catalog string for LLM prompts.
+
+    Lists each base theme with id, name, description, and mood/style keywords
+    so the LLM can recommend the best theme for a given presentation topic.
+    """
+    lines = []
+    for theme in _THEMES.values():
+        mood = _THEME_FONT_GROUP.get(theme.id, "modern")
+        bg_type = "dark" if _is_dark_theme(theme) else "light"
+        lines.append(
+            f"  - {theme.id}: {theme.name} — {theme.description or 'No description'} "
+            f"[mood: {mood}, background: {bg_type}]"
+        )
+    return "\n".join(lines)
+
+
+def _is_dark_theme(theme: SlideTheme) -> bool:
+    """Check if a theme has a dark background."""
+    bg = theme.colors.background.lstrip("#")
+    if len(bg) == 6:
+        r, g, b = int(bg[0:2], 16), int(bg[2:4], 16), int(bg[4:6], 16)
+        luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return luminance < 128
+    return False
+
+
+# === Custom Theme Generation (LLM-Driven) ===
+
+import hashlib as _hashlib
+import re as _re
+
+_HEX_RE = _re.compile(r"^#?([0-9a-fA-F]{6})$")
+
+_COLOR_FIELDS = ["primary", "secondary", "accent", "background", "text", "text_light"]
+
+
+def _normalize_hex(value: str) -> str:
+    """Normalize a hex color string to #RRGGBB format."""
+    m = _HEX_RE.match(value.strip())
+    if not m:
+        raise ValueError(f"Invalid hex color: {value!r}")
+    return f"#{m.group(1).upper()}"
+
+
+def validate_custom_colors(
+    colors: dict,
+) -> tuple[SlideThemeColors, list[str]]:
+    """Validate and auto-repair LLM-generated custom colors.
+
+    Returns (validated SlideThemeColors, list of auto-correction warnings).
+    Raises ValueError if colors are fundamentally unusable.
+    """
+    warnings: list[str] = []
+
+    # 1. Validate hex format for all required fields
+    validated: dict[str, str] = {}
+    for field in _COLOR_FIELDS:
+        raw = colors.get(field)
+        if not raw or not isinstance(raw, str):
+            raise ValueError(f"Missing or invalid color field: {field}")
+        validated[field] = _normalize_hex(raw)
+
+    # title_background: optional, derive if missing
+    raw_title_bg = colors.get("title_background")
+    if raw_title_bg and isinstance(raw_title_bg, str) and _HEX_RE.match(raw_title_bg.strip()):
+        validated["title_background"] = _normalize_hex(raw_title_bg)
+    else:
+        validated["title_background"] = _lightness_shift(validated["primary"], -0.15)
+        warnings.append("Derived title_background from primary")
+
+    # No aesthetic guardrails — LLM has full creative control.
+    # Colors are accepted as-is after hex format validation.
+
+    return SlideThemeColors(**validated), warnings
+
+
+def validate_font_style(font_style: str) -> tuple[str, str]:
+    """Map a font style keyword to a heading/body font pair.
+
+    Returns (font_heading, font_body).
+    """
+    style = font_style.strip().lower() if isinstance(font_style, str) else "modern"
+    group = _FONT_COMPAT_GROUPS.get(style, _FONT_COMPAT_GROUPS["modern"])
+    return group[0]  # First pair from the group
+
+
+def create_custom_theme(
+    name: str,
+    colors: dict,
+    font_style: str = "modern",
+    background_style: str = "solid",
+    recommended_base_id: str = DEFAULT_THEME_ID,
+) -> SlideTheme:
+    """Create a custom theme from LLM-generated style spec.
+
+    Falls back to the recommended base theme only if colors are
+    fundamentally unusable (invalid hex format).
+    No aesthetic guardrails — LLM has full creative control.
+    """
+    try:
+        validated_colors, warnings = validate_custom_colors(colors)
+    except ValueError:
+        # Colors completely unusable — fall back to base theme
+        base = _THEMES.get(recommended_base_id, _THEMES[DEFAULT_THEME_ID])
+        return base
+
+    font_heading, font_body = validate_font_style(font_style)
+
+    # Generate deterministic ID from color values
+    color_str = "|".join(
+        getattr(validated_colors, f) for f in _COLOR_FIELDS
+    )
+    theme_hash = _hashlib.sha256(color_str.encode()).hexdigest()[:10]
+    theme_id = f"custom-{theme_hash}"
+
+    bg_style = background_style if background_style in ("solid", "gradient") else "solid"
+
+    return SlideTheme(
+        id=theme_id,
+        name=name or "Custom Theme",
+        colors=validated_colors,
+        font_heading=font_heading,
+        font_body=font_body,
+        description=f"Custom theme: {name}",
+        base_theme_id=recommended_base_id,
+        background_style=bg_style,
+    )
+
+
+def register_custom_theme(theme: SlideTheme) -> None:
+    """Register a custom theme so get_theme() can resolve it."""
+    _THEMES[theme.id] = theme

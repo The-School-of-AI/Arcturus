@@ -12,7 +12,7 @@ export type AppCardType =
     // Finance / Business
     | 'profile' | 'valuation' | 'summary'
     // Developer
-    | 'json' | 'code' | 'log' | 'feed'
+    | 'json' | 'code' | 'log' | 'feed' | 'html_diagram' | 'visual_explainer'
     // Controls (Inputs)
     | 'button' | 'input' | 'select' | 'date_picker'
     | 'checkbox' | 'radio_group' | 'switch' | 'tags_input'

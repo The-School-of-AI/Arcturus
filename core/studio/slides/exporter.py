@@ -12,8 +12,27 @@ from pptx.enum.text import PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
+import logging
+
 from core.schemas.studio_schema import SlidesContentTree, SlideTheme
 from core.studio.slides.themes import _blend_color
+from core.studio.slides.images import extract_image_url
+
+_logger = logging.getLogger(__name__)
+
+
+def _download_image_url(url: str) -> io.BytesIO | None:
+    """Download an image from a URL and return as BytesIO, or None on failure."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = resp.read()
+            if len(data) > 0:
+                return io.BytesIO(data)
+    except Exception as e:
+        _logger.warning("Failed to download image from %s: %s", url, e)
+    return None
 
 # 16:9 widescreen dimensions
 SLIDE_WIDTH = Inches(13.333)
@@ -430,23 +449,174 @@ def _render_takeaway(slide, slide_data, theme, top=None):
     return True
 
 
-def _set_slide_background(slide, theme):
-    """Set slide background — supports solid and gradient fills."""
-    bg_hex = theme.colors.background.lstrip("#")
+def _css_color_to_hex(css_color: str) -> str | None:
+    """Convert a CSS color (hex, rgb, rgba) to a 6-digit hex string."""
+    if not css_color:
+        return None
+    css_color = css_color.strip()
+    # 6-digit hex
+    m = re.match(r'^#([0-9a-fA-F]{6})$', css_color)
+    if m:
+        return css_color.upper()
+    # 3-digit hex
+    m = re.match(r'^#([0-9a-fA-F]{3})$', css_color)
+    if m:
+        c = m.group(1)
+        return f"#{c[0]*2}{c[1]*2}{c[2]*2}".upper()
+    # 8-digit hex (with alpha) — take first 6
+    m = re.match(r'^#([0-9a-fA-F]{6})[0-9a-fA-F]{2}$', css_color)
+    if m:
+        return f"#{m.group(1)}".upper()
+    # rgb(r, g, b) or rgba(r, g, b, a)
+    m = re.match(r'rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)', css_color)
+    if m:
+        r, g, b = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        return f"#{r:02X}{g:02X}{b:02X}"
+    return None
+
+
+_LINEAR_GRADIENT_RE = re.compile(
+    r'linear-gradient\s*\(\s*'
+    r'(?:(\d+)deg\s*,\s*)?'
+    r'(?:to\s+\w+(?:\s+\w+)?\s*,\s*)?'
+    r'(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))'
+    r'(?:\s+\d+%)?\s*,\s*'
+    r'(?:[^,]+,\s*)*?'  # skip middle stops
+    r'(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))'
+    r'(?:\s+\d+%)?'
+    r'\s*\)',
+    re.IGNORECASE,
+)
+
+
+def _parse_linear_gradient(css_value: str) -> tuple[str, str, int] | None:
+    """Parse CSS linear-gradient into (color1_hex, color2_hex, angle).
+
+    Uses first and last color stops (PPTX only supports 2 stops).
+    Returns None if not parseable.
+    """
+    m = _LINEAR_GRADIENT_RE.search(css_value)
+    if not m:
+        return None
+    angle = int(m.group(1)) if m.group(1) else 135
+    c1 = _css_color_to_hex(m.group(2))
+    c2 = _css_color_to_hex(m.group(3))
+    if c1 and c2:
+        # Convert CSS angle (0=up, clockwise) to PPTX angle
+        pptx_angle = (450 - angle) % 360
+        return (c1, c2, pptx_angle)
+    return None
+
+
+def _resolve_title_color(slide_data, theme) -> str:
+    """Get title color from slide_style override or theme."""
+    meta = getattr(slide_data, "metadata", None) or {}
+    ss = meta.get("slide_style") or meta.get("visual_style") or {}
+    if isinstance(ss, dict):
+        title_style = ss.get("title", {})
+        if isinstance(title_style, dict):
+            color = title_style.get("color")
+            if color:
+                hex_color = _css_color_to_hex(color)
+                if hex_color:
+                    return hex_color
+    return theme.colors.primary
+
+
+def _resolve_body_color(slide_data, theme) -> str:
+    """Get body text color from slide_style override or theme."""
+    meta = getattr(slide_data, "metadata", None) or {}
+    ss = meta.get("slide_style") or meta.get("visual_style") or {}
+    if isinstance(ss, dict):
+        body_style = ss.get("body", {})
+        if isinstance(body_style, dict):
+            color = body_style.get("color")
+            if color:
+                hex_color = _css_color_to_hex(color)
+                if hex_color:
+                    return hex_color
+    return theme.colors.text
+
+
+def _set_slide_background(slide, theme, slide_style=None):
+    """Set slide background from slide_style CSS or theme default.
+
+    Supports:
+    - LLM-specified CSS backgrounds (solid hex, linear-gradient)
+    - Legacy visual_style bg_variant values
+    - Theme background fallback
+    """
+    bg_value = None
+    if isinstance(slide_style, dict):
+        # New format: slide_style.background.value
+        bg_obj = slide_style.get("background")
+        if isinstance(bg_obj, dict):
+            bg_value = bg_obj.get("value")
+        # Legacy format: visual_style.bg_variant — convert to CSS
+        if not bg_value:
+            bg_variant = slide_style.get("bg_variant")
+            if bg_variant == "dark_invert":
+                title_bg = getattr(theme.colors, "title_background", None) or _blend_color(theme.colors.background, "#000000", 0.85)
+                fill = slide.background.fill
+                fill.solid()
+                fill.fore_color.rgb = RGBColor.from_string(title_bg.lstrip("#"))
+                return
+            elif bg_variant == "accent_wash":
+                washed = _blend_color(theme.colors.background, theme.colors.accent, 0.05)
+                fill = slide.background.fill
+                fill.solid()
+                fill.fore_color.rgb = RGBColor.from_string(washed.lstrip("#"))
+                return
+            elif bg_variant == "gradient":
+                bg_value = f"linear-gradient(135deg, {theme.colors.background}, {_blend_color(theme.colors.background, theme.colors.primary, 0.08)})"
+
+    bg_hex = theme.colors.background
+
+    if bg_value:
+        # Try to parse as gradient
+        gradient = _parse_linear_gradient(bg_value)
+        if gradient:
+            c1, c2, angle = gradient
+            try:
+                fill = slide.background.fill
+                fill.gradient()
+                fill.gradient_stops[0].color.rgb = RGBColor.from_string(c1.lstrip("#"))
+                fill.gradient_stops[1].color.rgb = RGBColor.from_string(c2.lstrip("#"))
+                fill.gradient_angle = angle
+                return
+            except Exception:
+                pass  # Fall through to solid
+
+        # Try to extract a solid hex color
+        hex_color = _css_color_to_hex(bg_value)
+        if not hex_color:
+            # Try first hex in the string
+            hex_match = re.search(r'#([0-9a-fA-F]{6})', bg_value)
+            if hex_match:
+                hex_color = f"#{hex_match.group(1)}"
+        if hex_color:
+            fill = slide.background.fill
+            fill.solid()
+            fill.fore_color.rgb = RGBColor.from_string(hex_color.lstrip("#"))
+            return
+
+    # Theme-level background style
     if getattr(theme, "background_style", None) == "gradient":
         try:
-            primary_hex = theme.colors.primary.lstrip("#")
+            blended = _blend_color(bg_hex, theme.colors.primary, 0.08)
             fill = slide.background.fill
             fill.gradient()
-            fill.gradient_stops[0].color.rgb = RGBColor.from_string(bg_hex)
-            fill.gradient_stops[1].color.rgb = RGBColor.from_string(primary_hex)
+            fill.gradient_stops[0].color.rgb = RGBColor.from_string(bg_hex.lstrip("#"))
+            fill.gradient_stops[1].color.rgb = RGBColor.from_string(blended.lstrip("#"))
             fill.gradient_angle = 270
             return
         except Exception:
-            pass  # Fall through to solid fill
+            pass
+
+    # Fallback: solid theme background
     fill = slide.background.fill
     fill.solid()
-    fill.fore_color.rgb = RGBColor.from_string(bg_hex)
+    fill.fore_color.rgb = RGBColor.from_string(bg_hex.lstrip("#"))
 
 
 # === Slide Chrome ===
@@ -1063,7 +1233,7 @@ def _render_title(slide, slide_data, theme, **kwargs):
         title_color = "#FFFFFF"
         subtitle_color = "#CCCCCC"
     else:
-        _set_slide_background(slide, theme)
+        _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
         title_color = theme.colors.primary
         subtitle_color = theme.colors.text_light
 
@@ -1266,7 +1436,7 @@ def _render_content(slide, slide_data, theme, **kwargs):
                       accent_color=theme.colors.accent)
 
     _render_takeaway(slide, slide_data, theme)
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_two_column(slide, slide_data, theme, **kwargs):
@@ -1325,7 +1495,7 @@ def _render_two_column(slide, slide_data, theme, **kwargs):
 
     _render_takeaway(slide, slide_data, theme)
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_comparison(slide, slide_data, theme, **kwargs):
@@ -1462,7 +1632,7 @@ def _render_comparison(slide, slide_data, theme, **kwargs):
 
     _render_takeaway(slide, slide_data, theme)
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_timeline(slide, slide_data, theme, **kwargs):
@@ -1629,7 +1799,7 @@ def _render_timeline(slide, slide_data, theme, **kwargs):
                           accent_color=theme.colors.accent)
 
     _render_takeaway(slide, slide_data, theme)
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_chart(slide, slide_data, theme, **kwargs):
@@ -1679,7 +1849,7 @@ def _render_chart(slide, slide_data, theme, **kwargs):
                       font_color=theme.colors.text)
 
     _render_takeaway(slide, slide_data, theme)
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_image_text(slide, slide_data, theme, **kwargs):
@@ -1697,9 +1867,15 @@ def _render_image_text(slide, slide_data, theme, **kwargs):
     body_el = _find_element(slide_data, "body")
     has_body = body_el and body_el.content
 
-    # Check for a generated image
+    # Check for a generated image or external URL
     images = kwargs.get("images") or {}
     img_buf = images.get(slide_data.id) if slide_data.id else None
+
+    # Try external URL if no generated image
+    if img_buf is None and image_el and image_el.content:
+        ext_url = extract_image_url(image_el.content)
+        if ext_url:
+            img_buf = _download_image_url(ext_url)
 
     # Use full width when there's no body text
     img_width = COLUMN_WIDTH if has_body else BODY_WIDTH
@@ -1735,7 +1911,7 @@ def _render_image_text(slide, slide_data, theme, **kwargs):
                       font_color=theme.colors.text,
                       accent_color=theme.colors.accent)
 
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_quote(slide, slide_data, theme, **kwargs):
@@ -1776,7 +1952,7 @@ def _render_quote(slide, slide_data, theme, **kwargs):
                       font_color=theme.colors.text_light,
                       alignment=PP_ALIGN.CENTER)
 
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_code(slide, slide_data, theme, **kwargs):
@@ -1795,7 +1971,7 @@ def _render_code(slide, slide_data, theme, **kwargs):
                       font_name="Courier New", font_size=_DESIGN_TOKENS["code_size"],
                       font_color=theme.colors.text, parse_markdown=False)
 
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_team(slide, slide_data, theme, **kwargs):
@@ -1828,7 +2004,7 @@ def _render_team(slide, slide_data, theme, **kwargs):
                       accent_color=theme.colors.accent)
 
     _add_decorative_accent(slide, theme, kwargs.get("slide_index", 0))
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_stat(slide, slide_data, theme, **kwargs):
@@ -1905,13 +2081,21 @@ def _render_stat(slide, slide_data, theme, **kwargs):
                       alignment=PP_ALIGN.CENTER)
 
     _render_takeaway(slide, slide_data, theme)
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _render_image_full(slide, slide_data, theme, **kwargs):
     """Full-bleed image slide: image covers entire slide with dark overlay and white text."""
     images = kwargs.get("images") or {}
     img_buf = images.get(slide_data.id) if slide_data.id else None
+
+    # Try external URL if no generated image
+    if img_buf is None:
+        image_el = _find_element(slide_data, "image")
+        if image_el and image_el.content:
+            ext_url = extract_image_url(image_el.content)
+            if ext_url:
+                img_buf = _download_image_url(ext_url)
 
     if img_buf is not None:
         # Embed full-bleed image covering entire slide
@@ -1998,7 +2182,7 @@ def _render_section_divider(slide, slide_data, theme, **kwargs):
         title_color = "#FFFFFF"
         subtitle_color = "#CCCCCC"
     else:
-        _set_slide_background(slide, theme)
+        _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
         title_color = theme.colors.primary
         subtitle_color = theme.colors.text_light
 
@@ -2075,7 +2259,7 @@ def _render_agenda(slide, slide_data, theme, **kwargs):
         items = bullet_el.content[:9]  # Max 9 items
 
     if not items:
-        _set_slide_background(slide, theme)
+        _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
         return
 
     # Grid layout: 2 columns for <=6 items, 3 columns for >6
@@ -2140,7 +2324,7 @@ def _render_agenda(slide, slide_data, theme, **kwargs):
                           font_size=_DESIGN_TOKENS["body_small_size"],
                           font_color=theme.colors.text_light)
 
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 def _style_table_cell(cell, theme, *, is_header, is_alt):
@@ -2222,7 +2406,7 @@ def _render_table(slide, slide_data, theme, **kwargs):
                       font_size=_DESIGN_TOKENS["body_small_size"],
                       font_color=theme.colors.secondary,
                       alignment=PP_ALIGN.CENTER)
-        _set_slide_background(slide, theme)
+        _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
         return
 
     # Reserve space for source citation and takeaway
@@ -2287,7 +2471,7 @@ def _render_table(slide, slide_data, theme, **kwargs):
                       alignment=PP_ALIGN.RIGHT)
 
     _render_takeaway(slide, slide_data, theme)
-    _set_slide_background(slide, theme)
+    _set_slide_background(slide, theme, (getattr(slide_data, 'metadata', None) or {}).get('slide_style') or (getattr(slide_data, 'metadata', None) or {}).get('visual_style'))
 
 
 # Renderer dispatch table

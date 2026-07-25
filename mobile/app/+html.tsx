@@ -18,8 +18,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
         */}
         <ScrollViewStyleReset />
 
-        {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
-        <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
+        {/* Match Arcturus app theme: light = cool blue-grey, dark = deep navy (no white/black flicker). */}
+        <style dangerouslySetInnerHTML={{ __html: appThemeStyles }} />
         {/* Add any additional <head> elements that you want globally available on web... */}
       </head>
       <body>{children}</body>
@@ -27,12 +27,30 @@ export default function Root({ children }: { children: React.ReactNode }) {
   );
 }
 
-const responsiveBackground = `
-body {
-  background-color: #fff;
+/* Arcturus design system — aligned with platform-frontend (index.css) and mobile Colors */
+const appThemeStyles = `
+:root {
+  /* Light: crisp, airy, tech blue */
+  --app-bg: hsl(210, 40%, 98%);
+  --app-fg: hsl(222, 47%, 11%);
+  --app-primary: hsl(221, 83%, 53%);
 }
 @media (prefers-color-scheme: dark) {
-  body {
-    background-color: #000;
+  :root {
+    /* Dark: deep space, navy */
+    --app-bg: hsl(222, 47%, 11%);
+    --app-fg: hsl(210, 40%, 98%);
+    --app-primary: hsl(217, 91%, 60%);
   }
+}
+html {
+  background: var(--app-bg);
+  color: var(--app-fg);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-fg);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }`;

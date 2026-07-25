@@ -32,7 +32,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, active, onClick }) => (
     <button
         onClick={onClick}
         className={cn(
-            "px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-tighter transition-all",
+            "px-3 py-1 rounded-md text-2xs font-bold uppercase tracking-tight transition-all",
             active ? "bg-white text-black shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
         )}
     >
@@ -367,14 +367,14 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
                             <span className="text-[11px] font-medium truncate flex-1">{doc.title}</span>
                             <button
                                 onClick={(e) => { e.stopPropagation(); closeDocument(doc.id); }}
-                                className="p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="p-1 rounded-md hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                     ))}
                     {openDocuments.length === 0 && (
-                        <div className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/90">{isNotes ? 'Notes Workspace' : 'Discovery Workspace'}</div>
+                        <div className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground/90">{isNotes ? 'Notes Workspace' : 'Discovery Workspace'}</div>
                     )}
                 </div>
 
@@ -382,7 +382,7 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
                     {openDocuments.length > 0 && (
                         <button
                             onClick={closeAllDocuments}
-                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-white/5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/10 border border-border/50"
+                            className="flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-accent text-2xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-all bg-black/10 border border-border/50"
                         >
                             <X className="w-2.5 h-2.5" />
                             Clear
@@ -410,7 +410,7 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
                                 <button
                                     onClick={toggleRagInsights}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all text-[9px] font-bold uppercase tracking-wider border",
+                                        "flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all text-2xs font-bold uppercase tracking-wider border",
                                         showRagInsights
                                             ? "bg-primary text-primary-foreground border-primary shadow-[0_0_12px_rgba(59,130,246,0.3)]"
                                             : "bg-black/10 text-muted-foreground hover:text-foreground border-border/50 hover:bg-black/20"
@@ -430,10 +430,10 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
             <div className="flex-1 overflow-hidden relative bg-transparent selection:bg-primary/20 select-text">
                 {loading && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-[100] space-y-4">
-                        <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-2xl">
+                        <div className="p-4 rounded-2xl bg-card border border-border/50 shadow-sm">
                             <Loader2 className="w-10 h-10 text-primary animate-spin" />
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Initializing Extraction...</div>
+                        <div className="text-xs font-bold uppercase tracking-[0.3em] text-primary/60 animate-pulse">Initializing Extraction...</div>
                     </div>
                 )}
 
@@ -459,7 +459,7 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
                         <img
                             src={imageUrl}
                             alt={activeDoc?.title}
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-border shadow-black/80"
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-sm border border-border shadow-black/80"
                         />
                     </div>
                 )}
@@ -496,11 +496,11 @@ export const DocumentViewer: React.FC<{ context?: 'rag' | 'notes' }> = ({ contex
                                                         )}>
                                                             <div className="flex items-center gap-2">
                                                                 <div className={cn("w-1.5 h-1.5 rounded-full transition-colors", isExpanded ? "bg-primary" : "bg-muted-foreground/40")} />
-                                                                <span className={cn("text-[10px] font-bold uppercase tracking-widest", isExpanded ? "text-primary" : "text-muted-foreground")}>
+                                                                <span className={cn("text-xs font-bold uppercase tracking-wide", isExpanded ? "text-primary" : "text-muted-foreground")}>
                                                                     Chunk {i + 1}
                                                                 </span>
                                                             </div>
-                                                            {isCodeFile(activeDoc.type) && <span className="text-[10px] font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
+                                                            {isCodeFile(activeDoc.type) && <span className="text-xs font-mono text-primary/70">{activeDoc.type.toUpperCase()}</span>}
                                                         </div>
 
                                                         <div className="relative p-4">

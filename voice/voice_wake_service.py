@@ -79,7 +79,7 @@ class VoiceWakeService:
         self._thread.start()
 
     def _loop(self):
-        print("🎙️ [Voice] Priming microphone and engine...")
+        print("[Voice] Priming microphone and engine...")
         # 2.5s warmup — Windows audio drivers often need extra time to stabilize
         warmup_frames = int(2.5 * self.engine.sample_rate / self.engine.frame_length)
         rms_sum = 0.0
@@ -104,7 +104,7 @@ class VoiceWakeService:
             if avg_rms < 10:
                 print("⚠️ [Voice] Microphone appears silent (RMS ≈ 0). "
                       "Check mic permissions or hardware.")
-        print("🎙️ [Voice] Hardware WARM. Listening for wake word now.")
+        print("[Voice] Hardware WARM. Listening for wake word now.")
 
         while self._running:
             try:
@@ -196,20 +196,24 @@ class VoiceWakeService:
                                     self._barge_in_buffer.clear()
                                     self._barge_in_hold_buffer.clear()
                                     self._barge_in_detected_at = None
-                                    
-                                    # Trigger wake flow — state → LISTENING, TTS cancel, nexus abort
+
+                                    # Now fire on_wake (only once) — state → LISTENING, nexus abort
                                     self.on_wake({"type": "BARGE_IN"})
                                     self._barge.reset_speech_streak()
                                 continue
 
                             elif interrupted:
-                                # ── FIRST DETECTION: stop TTS instantly and start hold window ──
+                                # ── FIRST DETECTION: stop TTS only, start hold for confirmation ──
+                                # Do NOT fire on_wake yet — wait for hold window to confirm
+                                # this is real speech, not a noise spike.  TTS is cancelled
+                                # immediately so the user isn't talked over.
                                 print(f"⚡ [Voice] VAD Barge-in detected! (RMS: {rms:.1f}, Ratio: {ratio:.2f}x) "
-                                      f"— stopping TTS and holding {self._BARGE_IN_HOLD_SEC:.1f}s for STT.")
-                                
-                                # Trigger wake flow instantly so TTS stops and UI updates
-                                self.on_wake({"type": "BARGE_IN"})
-                                
+                                      f"— stopping TTS, holding {self._BARGE_IN_HOLD_SEC:.1f}s to confirm.")
+
+                                # Cancel TTS directly (don't fire full on_wake yet)
+                                if self.orchestrator:
+                                    self.orchestrator.tts.cancel()
+
                                 self._barge_in_detected_at = time.time()
                                 self._barge_in_hold_buffer.clear()
                                 self._barge.reset_speech_streak()

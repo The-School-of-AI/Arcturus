@@ -65,20 +65,27 @@ class QdrantRAGStore:
         api_key = get_qdrant_api_key()
         self.client = QdrantClient(url=self.url, api_key=api_key, timeout=10.0)
         self._ensure_collection()
-        self._has_sparse = self._check_has_sparse()
+        self._has_sparse, self._is_named = self._check_collection_capabilities()
 
-    def _check_has_sparse(self) -> bool:
-        """Check if collection has sparse vectors (e.g. created with Phase C config)."""
+    def _check_collection_capabilities(self) -> tuple[bool, bool]:
+        """Check if collection has sparse vectors and if it uses named vectors."""
         try:
             info = self.client.get_collection(self.collection_name)
-            sparse = getattr(info.config, "params", None) and getattr(
-                info.config.params, "sparse_vectors", None
-            )
-            if sparse and self.SPARSE_VECTOR_NAME in sparse:
-                return True
-            return False
+            params = getattr(info.config, "params", None)
+            if not params:
+                return False, False
+            
+            # Check for named vectors
+            v_config = getattr(params, "vectors_config", None)
+            is_named = isinstance(v_config, dict)
+            
+            # Check for sparse vectors
+            sparse = getattr(params, "sparse_vectors", None)
+            has_sparse = bool(sparse and self.SPARSE_VECTOR_NAME in sparse)
+            
+            return has_sparse, is_named
         except Exception:
-            return False
+            return False, False
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
@@ -197,6 +204,8 @@ class QdrantRAGStore:
                         payload=payload,
                     )
                 )
+            elif self._is_named:
+                points.append(PointStruct(id=_chunk_id_to_point_id(chunk_id), vector={"default": vec}, payload=payload))
             else:
                 points.append(PointStruct(id=_chunk_id_to_point_id(chunk_id), vector=vec, payload=payload))
         if points:
@@ -273,7 +282,7 @@ class QdrantRAGStore:
             with_payload=True,
             query_filter=search_filter,
         )
-        if self._has_sparse:
+        if self._is_named:
             kwargs["using"] = "default"
         return self.client.query_points(**kwargs)
 

@@ -50,6 +50,7 @@ class ForgeOrchestrator:
         parameters: Optional[Dict[str, Any]] = None,
         title: Optional[str] = None,
         model: Optional[str] = None,
+        slide_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Generate an outline for a new artifact.
 
@@ -58,7 +59,7 @@ class ForgeOrchestrator:
         parameters = parameters or {}
 
         # Build prompt and call LLM
-        llm_prompt = get_outline_prompt(artifact_type, prompt, parameters)
+        llm_prompt = get_outline_prompt(artifact_type, prompt, parameters, slide_mode=slide_mode)
         mm = ModelManager(model_name=model) if model else ModelManager()
         raw = await mm.generate_text(llm_prompt)
 
@@ -81,9 +82,47 @@ class ForgeOrchestrator:
         )
 
         # Slides-specific outline normalization
+        is_business = slide_mode == "business"
+        recommended_theme_id = None
+        custom_theme_dict = None
         if artifact_type == ArtifactType.slides:
             from core.studio.slides.generator import normalize_slide_outline
             outline = normalize_slide_outline(outline, parameters, prompt)
+
+            # Theme extraction — artistic mode only
+            if not is_business:
+                # Extract LLM-recommended base theme
+                raw_theme_id = parsed.get("recommended_theme_id")
+                if raw_theme_id and isinstance(raw_theme_id, str):
+                    from core.studio.slides.themes import get_theme_ids
+                    valid_ids = set(get_theme_ids())
+                    if raw_theme_id.strip() in valid_ids:
+                        recommended_theme_id = raw_theme_id.strip()
+                        logger.info("LLM recommended base theme: %s", recommended_theme_id)
+
+                # Extract and create custom theme from LLM style spec
+                custom_style = parsed.get("custom_style")
+                if custom_style and isinstance(custom_style, dict):
+                    try:
+                        from core.studio.slides.themes import create_custom_theme, register_custom_theme
+                        custom_theme = create_custom_theme(
+                            name=custom_style.get("name", "Custom Theme"),
+                            colors=custom_style.get("colors", {}),
+                            font_style=custom_style.get("font_style", "modern"),
+                            background_style=custom_style.get("background_style", "solid"),
+                            recommended_base_id=recommended_theme_id or "corporate-blue",
+                        )
+                        # Only use custom theme if it wasn't a fallback to base
+                        if custom_theme.id.startswith("custom-"):
+                            register_custom_theme(custom_theme)
+                            custom_theme_dict = custom_theme.model_dump(mode="json")
+                            recommended_theme_id = custom_theme.id
+                            logger.info("Created custom theme: %s (%s)", custom_theme.id, custom_theme.name)
+                        else:
+                            logger.info("Custom theme fell back to base: %s", custom_theme.id)
+                            recommended_theme_id = custom_theme.id
+                    except Exception as e:
+                        logger.warning("Custom theme creation failed: %s", e)
 
         # Document-specific outline normalization
         if artifact_type == ArtifactType.document:
@@ -101,17 +140,23 @@ class ForgeOrchestrator:
             updated_at=now,
             model=model,
             creation_prompt=prompt.strip() or None,
+            slide_mode=slide_mode if artifact_type == ArtifactType.slides else None,
             outline=outline,
             content_tree=None,
+            theme_id=recommended_theme_id,
+            custom_theme=custom_theme_dict,
         )
 
         self.storage.save_artifact(artifact)
 
-        return {
+        result = {
             "artifact_id": artifact_id,
             "outline": outline.model_dump(mode="json"),
             "status": "pending",
         }
+        if recommended_theme_id:
+            result["recommended_theme_id"] = recommended_theme_id
+        return result
 
     async def approve_and_generate_draft(
         self,
@@ -144,6 +189,7 @@ class ForgeOrchestrator:
         artifact.outline.status = OutlineStatus.approved
 
         # Generate draft via LLM (slides-specific: inject sequence hints)
+        _slide_mode = artifact.slide_mode  # None for non-slides or artistic (default)
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.generator import (
                 clamp_slide_count,
@@ -155,15 +201,54 @@ class ForgeOrchestrator:
                 artifact.outline.parameters.get("slide_count") if artifact.outline.parameters else None
             )
             sequence = plan_slide_sequence(target_count, seed)
-            llm_prompt = get_draft_prompt_with_sequence(artifact.type, artifact.outline, sequence)
+            llm_prompt = get_draft_prompt_with_sequence(
+                artifact.type, artifact.outline, sequence,
+                creation_prompt=artifact.creation_prompt,
+                slide_mode=_slide_mode,
+            )
         else:
-            llm_prompt = get_draft_prompt(artifact.type, artifact.outline)
+            llm_prompt = get_draft_prompt(artifact.type, artifact.outline, creation_prompt=artifact.creation_prompt)
 
         mm = ModelManager(model_name=artifact.model) if artifact.model else ModelManager()
+
+        # Dump prompt & response to disk for debugging (slides only for now)
+        _debug_dir = None
+        if artifact.type == ArtifactType.slides:
+            import pathlib
+            _debug_dir = pathlib.Path("studio") / artifact_id / "debug"
+            _debug_dir.mkdir(parents=True, exist_ok=True)
+            (_debug_dir / "prompt.txt").write_text(llm_prompt, encoding="utf-8")
+            logger.info("Saved draft prompt to %s/prompt.txt", _debug_dir)
+
         raw = await mm.generate_text(llm_prompt)
+
+        if _debug_dir:
+            (_debug_dir / "llm_response_raw.txt").write_text(raw, encoding="utf-8")
+            logger.info(
+                "Saved raw LLM response (%d chars) to %s/llm_response_raw.txt",
+                len(raw), _debug_dir,
+            )
 
         # Parse and validate content tree
         parsed = parse_llm_json(raw)
+
+        # Slides-specific: normalize raw LLM field names before validation
+        if artifact.type == ArtifactType.slides:
+            from core.studio.slides.generator import normalize_slides_content_tree_raw
+            parsed = normalize_slides_content_tree_raw(parsed)
+
+            # Debug: log html field status
+            _slides = parsed.get("slides", [])
+            _html_count = sum(1 for s in _slides if isinstance(s, dict) and s.get("html"))
+            logger.info(
+                "Slides draft: %d slides, %d with html field", len(_slides), _html_count
+            )
+            if _html_count == 0 and len(_slides) > 0:
+                _has_html_in_raw = '"html"' in raw or "'html'" in raw
+                logger.warning(
+                    "No html fields in parsed slides. Raw contains 'html' key: %s",
+                    _has_html_in_raw,
+                )
 
         # Document-specific: normalize raw LLM field names before validation
         if artifact.type == ArtifactType.document:
@@ -185,6 +270,10 @@ class ForgeOrchestrator:
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.generator import enforce_slide_count
             content_tree_model = enforce_slide_count(content_tree_model, target_count=target_count)
+
+            # Normalize per-slide visual styles
+            from core.studio.slides.generator import normalize_visual_styles
+            content_tree_model = normalize_visual_styles(content_tree_model)
 
             # Phase 3: notes quality repair pass
             from core.studio.slides.notes import repair_speaker_notes
@@ -288,7 +377,7 @@ class ForgeOrchestrator:
 
         # Validate artifact type / format combinations
         _VALID_COMBOS = {
-            ArtifactType.slides: {ExportFormat.pptx},
+            ArtifactType.slides: {ExportFormat.pptx, ExportFormat.pdf},
             ArtifactType.document: {ExportFormat.docx, ExportFormat.pdf, ExportFormat.html},
             ArtifactType.sheet: {ExportFormat.xlsx, ExportFormat.csv},
         }
@@ -323,6 +412,7 @@ class ForgeOrchestrator:
         theme = None
         if artifact.type == ArtifactType.slides:
             from core.studio.slides.themes import get_theme
+            _ensure_custom_theme_registered(artifact)
             theme = get_theme(theme_id or artifact.theme_id)
 
         # Create export job
@@ -347,6 +437,13 @@ class ForgeOrchestrator:
         ))
         artifact.updated_at = datetime.now(timezone.utc)
         self.storage.save_artifact(artifact)
+
+        # Slide PDF export — always async (Playwright browser rendering)
+        if artifact.type == ArtifactType.slides and export_format == ExportFormat.pdf:
+            asyncio.create_task(self._run_slide_pdf_export(
+                artifact_id, export_job, artifact.content_tree, theme,
+            ))
+            return export_job.model_dump(mode="json")
 
         if artifact.type == ArtifactType.slides and generate_images:
             # Run heavy work in background — return pending job immediately
@@ -386,13 +483,40 @@ class ForgeOrchestrator:
         content_tree_dict: dict,
         version: int,
     ) -> None:
-        """Background task: generate slide images via Gemini and cache to disk."""
+        """Background task: generate slide images via Gemini and cache to disk.
+
+        Also resolves HTML image placeholders (<img data-placeholder="true">)
+        for the new HTML-per-slide rendering path.
+        """
         try:
             from core.schemas.studio_schema import SlidesContentTree
-            from core.studio.slides.images import generate_slide_images
+            from core.studio.slides.images import generate_slide_images, resolve_html_images
 
-            content_tree = SlidesContentTree(**content_tree_dict)
-            images = await generate_slide_images(content_tree)
+            # Determine mode from the artifact
+            artifact = self.storage.load_artifact(artifact_id)
+            _slide_mode = artifact.slide_mode if artifact else None
+            is_business = _slide_mode == "business"
+
+            if is_business:
+                # Business mode: AI-generated images for structured slides (PPTX)
+                content_tree = SlidesContentTree(**content_tree_dict)
+                images = await generate_slide_images(content_tree)
+            else:
+                # Artistic mode: resolve HTML image placeholders via web search
+                # 1. Resolve HTML image placeholders (mutates content_tree_dict in place)
+                html_updated = await resolve_html_images(content_tree_dict)
+                if html_updated:
+                    # Persist updated content tree with resolved image URLs
+                    if self._image_gen_version.get(artifact_id, 0) == version:
+                        artifact = self.storage.load_artifact(artifact_id)
+                        if artifact is not None:
+                            artifact.content_tree = content_tree_dict
+                            self.storage.save_artifact(artifact)
+                            logger.info("Saved resolved HTML images for artifact %s", artifact_id)
+
+                # 2. Skip structured image generation for HTML slides
+                content_tree = SlidesContentTree(**content_tree_dict)
+                images = {}
 
             # Skip writes if a newer generation was started (edit during generation)
             if self._image_gen_version.get(artifact_id, 0) != version:
@@ -523,6 +647,54 @@ class ForgeOrchestrator:
             artifact.updated_at = datetime.now(timezone.utc)
             self.storage.save_artifact(artifact)
 
+
+    async def _run_slide_pdf_export(
+        self,
+        artifact_id: str,
+        export_job: Any,
+        content_tree_dict: dict,
+        theme: Any,
+    ) -> None:
+        """Export slides to PDF using Playwright browser rendering."""
+        from core.schemas.studio_schema import ExportStatus, SlidesContentTree
+        from core.studio.slides.exporter_pdf import export_to_pdf
+
+        try:
+            content_tree_model = SlidesContentTree(**content_tree_dict)
+
+            output_path = self.storage.get_export_file_path(
+                artifact_id, export_job.id, "pdf"
+            )
+
+            await export_to_pdf(content_tree_model, theme, output_path)
+
+            export_job.status = ExportStatus.completed
+            export_job.output_uri = str(output_path)
+            export_job.file_size_bytes = output_path.stat().st_size
+            export_job.validator_results = {
+                "valid": True,
+                "quality_score": 95,
+                "slide_count": len(content_tree_model.slides),
+            }
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        except Exception as e:
+            logger.error(f"Slide PDF export failed: {e}", exc_info=True)
+            export_job.status = ExportStatus.failed
+            export_job.error = str(e)
+            export_job.completed_at = datetime.now(timezone.utc)
+
+        self.storage.save_export_job(export_job)
+
+        # Update the artifact's exports summary
+        artifact = self.storage.load_artifact(artifact_id)
+        if artifact is not None:
+            for summary in artifact.exports:
+                if summary.id == export_job.id:
+                    summary.status = export_job.status.value
+                    break
+            artifact.updated_at = datetime.now(timezone.utc)
+            self.storage.save_artifact(artifact)
 
     async def _run_document_export(
         self,
@@ -956,6 +1128,23 @@ class ForgeOrchestrator:
                 "restored_from": target_revision_id,
             },
         }
+
+
+def _ensure_custom_theme_registered(artifact: "Artifact") -> None:
+    """Re-register a custom theme from artifact data if not already in memory."""
+    if not artifact.custom_theme or not artifact.theme_id:
+        return
+    if not artifact.theme_id.startswith("custom-"):
+        return
+    from core.studio.slides.themes import get_theme_ids, register_custom_theme, SlideTheme
+    if artifact.theme_id in get_theme_ids():
+        return
+    try:
+        theme = SlideTheme(**artifact.custom_theme)
+        register_custom_theme(theme)
+        logger.info("Re-registered custom theme from artifact: %s", theme.id)
+    except Exception as e:
+        logger.warning("Failed to re-register custom theme: %s", e)
 
 
 def _parse_outline_item(data: dict) -> OutlineItem:

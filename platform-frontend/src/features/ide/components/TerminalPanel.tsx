@@ -133,9 +133,9 @@ export const TerminalPanel: React.FC = () => {
     return (
         <div className={cn(
             "h-full w-full flex flex-col overflow-hidden transition-colors border-t border-border/50",
-            theme === 'dark' ? "bg-background/30" : "bg-white/80"
+            theme === 'dark' ? "bg-background/30" : "bg-accent"
         )}>
-            <div className={cn("h-5 flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-border/50 bg-white/10" : "border-border bg-white")}>
+            <div className={cn("h-5 flex items-center justify-between px-4 border-b shrink-0", theme === 'dark' ? "border-border/50 bg-accent" : "border-border bg-white")}>
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2 text-xs font-bold text-primary">
                         <TerminalIcon className="w-3.5 h-3.5" />

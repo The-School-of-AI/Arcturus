@@ -1,0 +1,19 @@
+ # Bazaar Marketplace Trust Policy
+# Controls what verification is required to install marketplace skills
+
+# Trust levels: OPEN, CHECKSUM, SIGNED, VERIFIED
+trust_level: CHECKSUM
+
+# Authors whose skills are trusted at VERIFIED level
+trusted_authors:
+  - ByteBeam
+  - core_team
+
+# Skills that are explicitly blocked (never installable)
+blocked_skills: []
+
+# Permissions that skills are allowed to request
+# Skills requesting anything NOT in this list will be rejected
+allowed_permissions:
+  - network
+  - filesystem

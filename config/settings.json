@@ -2,12 +2,12 @@
   "watchtower": {
     "enabled": true,
     "mongodb_uri": "mongodb://localhost:27017",
-    "jaeger_endpoint": "http://localhost:4318/v1/traces",
+    "jaeger_endpoint": null,
     "health_check_interval_seconds": 60,
     "alert_rules": [],
     "throttle": {
-      "daily_budget_usd": 10.0,
-      "hourly_budget_usd": 2.0
+      "daily_budget_usd": 10,
+      "hourly_budget_usd": 2
     }
   },
   "ollama": {
@@ -19,7 +19,7 @@
     "semantic_chunking": "gemma3:4b",
     "image_captioning": "gemma3:4b",
     "memory_extraction": "gemma3:4b",
-    "insights_provider": "ollama",
+    "insights_provider": "gemini",
     "entity_extraction": "gemma3:4b"
   },
   "rag": {
@@ -31,8 +31,17 @@
   },
   "agent": {
     "model_provider": "gemini",
-    "default_model": "gemini-3.1-flash-lite-preview",
-    "overrides": {},
+    "default_model": "gemini-3.1-pro-preview",
+    "overrides": {
+      "IDEAgent": {
+        "model_provider": "ollama",
+        "model": "phi4:latest"
+      },
+      "TestAgent": {
+        "model_provider": "gemini",
+        "model": "gemini-3.1-pro-preview"
+      }
+    },
     "max_steps": 3,
     "max_lifelines_per_step": 3,
     "planning_mode": "conservative",
@@ -50,7 +59,12 @@
     "extraction_prompt": "You are a Contextual Memory Management AI.\nYour job is to update the \"Memory Vault\" based on the latest conversation.\n\nRULES:\n1. ANTI-FRAGMENTATION: NEVER split related items into separate facts. Merge them into ONE rich, coherent memory entry.\n2. NO REDUNDANCY: If info is already captured, do nothing unless you have NEW details (use \"update\").\n3. CONTEXTUAL HUBS: Prefer a single \"Hub\" memory over separate atomic facts.\n4. NO NEGATIVE FACTS: NEVER store \"not found\" or \"missing\" info.\n5. NO META-LOGS: Do not store internal reasoning or agent traces.\n6. HIGH SALIENCE ONLY: Focus on project decisions, user preferences, architectural details.\n7. ACTIONS: \"add\" for new facts, \"update\" to expand existing, \"delete\" if proven false."
   },
   "gemini": {
-    "api_key_env": "GEMINI_API_KEY"
+    "mode": "vertex_ai",
+    "api_key_env": "GEMINI_API_KEY",
+    "vertex_ai": {
+      "project": "",
+      "location": "us-central1"
+    }
   },
   "news": {
     "sources": [

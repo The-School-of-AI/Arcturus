@@ -24,17 +24,19 @@ import numpy as np
 @dataclass(frozen=True)
 class BargeInConfig:
     # Continuous speech requirement.
-    min_continuous_speech_ms: float = 160.0  # within required 120–200ms band
+    # 400ms rejects brief noise bursts / echo while still feeling responsive
+    # for genuine user interruptions.
+    min_continuous_speech_ms: float = 400.0
 
     # Energy requirement relative to ambient noise floor.
-    # 2.3x is a good default between 2.0–2.5x.
-    energy_ratio_threshold: float = 2.0
+    # 4.0x is strict enough to reject TV/music bleed and speaker echo.
+    energy_ratio_threshold: float = 4.0
 
-    # Near-field gating to prevent distant talkers from barging-in:
+    # Near-field gating to prevent distant talkers / speaker echo from barging-in:
     # Require a minimum absolute RMS AND a minimum margin above noise floor.
     # (Both are in int16 RMS units, 0–32768.)
-    min_absolute_rms: float = 700.0
-    min_rms_above_noise: float = 200.0
+    min_absolute_rms: float = 2000.0
+    min_rms_above_noise: float = 500.0
 
     # Absolute RMS floor to avoid division-by-near-zero or hypersensitivity
     # when noise floor hasn't been established yet.

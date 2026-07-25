@@ -16,13 +16,15 @@ from rich.panel import Panel
 from rich.text import Text
 
 class ExecutionContextManager:
-    def __init__(self, plan_graph: dict, session_id: str = None, original_query: str = None, file_manifest: list = None, debug_mode: bool = False, api_mode: bool = True):
+    def __init__(self, plan_graph: dict, session_id: str = None, original_query: str = None, file_manifest: list = None, debug_mode: bool = False, api_mode: bool = True, display_query: str = None, source: str = "web"):
         # 🎯 Build NetworkX graph with ALL data
         self.plan_graph = nx.DiGraph()
-        
+
         # Store session metadata in graph attributes
         self.plan_graph.graph['session_id'] = session_id or str(int(time.time()))[-8:]
-        self.plan_graph.graph['original_query'] = original_query
+        # display_query is the clean user message; original_query may include conversation history / skill wrappers
+        self.plan_graph.graph['original_query'] = display_query or original_query
+        self.plan_graph.graph['source'] = source
         self.plan_graph.graph['file_manifest'] = file_manifest or []
         self.stop_requested = False
 
@@ -234,7 +236,16 @@ class ExecutionContextManager:
                             session_id=self.plan_graph.graph['session_id']
                         )
                         result_obj = await sandbox.run(enhanced_code)
-                        
+
+                        # Log execution result for debugging
+                        exec_status = result_obj.get("status", "unknown")
+                        print(f"🔧 [{step_id}] Code variant {code_key}: {exec_status}")
+                        if exec_status == "error":
+                            print(f"   ❌ Error: {result_obj.get('error', 'unknown')[:300]}")
+                        elif exec_status == "success":
+                            result_preview = str(result_obj.get("result", ""))[:200]
+                            print(f"   ✅ Result preview: {result_preview}")
+
                         # Convert SandboxResult to expected dict format
                         if result_obj.get("status") == "success":
                             span.set_attribute("status", "success")
@@ -293,13 +304,21 @@ class ExecutionContextManager:
         enhanced_output["executed_variant"] = execution_result.get("executed_variant")
         enhanced_output["execution_logs"] = execution_result.get("logs")
         
-        # Merge execution results directly
+        # Merge execution results directly — execution results are authoritative
+        # and MUST overwrite agent's placeholder empty values (e.g. "raw_data_T001": [])
         if execution_result.get("status") == "success":
             result_data = execution_result.get("result", {})
             if isinstance(result_data, dict):
+                # Keys that are internal metadata and should never be overwritten
+                _protected_keys = {'code_variants', 'call_self', 'cost', 'input_tokens',
+                                   'output_tokens', 'execution_result', 'execution_status',
+                                   'execution_error', 'execution_time', 'executed_variant',
+                                   'execution_logs', 'next_instruction', 'iteration_context'}
                 for key, value in result_data.items():
-                    if key not in enhanced_output:
-                        enhanced_output[key] = value
+                    if key in _protected_keys:
+                        continue
+                    # Always overwrite — code execution results are the real data
+                    enhanced_output[key] = value
         
         return enhanced_output
     
@@ -475,12 +494,19 @@ class ExecutionContextManager:
                         extracted = True
                 
                 # Strategy 2: Extract from direct agent output (ThinkerAgent, DistillerAgent, FormatterAgent)
+                # Skip empty placeholders ([], {}, None, "") when execution failed — these are
+                # pre-execution stubs the agent set, not real data.
+                exec_failed = execution_result and execution_result.get("status") == "error"
                 if not extracted and output and isinstance(output, dict):
                     # Check root
                     if write_key in output:
-                        globals_schema[write_key] = output[write_key]
-                        print(f"✅ Extracted {write_key} = {output[write_key]} (direct)")
-                        extracted = True
+                        val = output[write_key]
+                        if exec_failed and (val is None or val == [] or val == {} or val == ""):
+                            print(f"⚠️  Skipping empty placeholder for {write_key} (code execution failed)")
+                        else:
+                            globals_schema[write_key] = val
+                            print(f"✅ Extracted {write_key} = {val} (direct)")
+                            extracted = True
                     # Check nested 'output' dictionary (common pattern)
                     elif "output" in output and isinstance(output["output"], dict) and write_key in output["output"]:
                         val = output["output"][write_key]
@@ -500,11 +526,15 @@ class ExecutionContextManager:
                         print(f"✅ Extracted {write_key} = [Markdown Report] (mapped from 'markdown_report')")
                         extracted = True
                 
-                # Strategy 3: Emergency fallback - try to find any matching data
+                # Strategy 3: Emergency fallback
                 if not extracted:
-                    print(f"⚠️  Could not extract {write_key}")
-                    # Set empty placeholder to prevent downstream errors
-                    globals_schema[write_key] = []
+                    if exec_failed:
+                        err_msg = execution_result.get("error", "Unknown execution error")
+                        print(f"⚠️  Could not extract {write_key} — code execution failed: {err_msg[:200]}")
+                        globals_schema[write_key] = f"[ERROR: Data unavailable — {err_msg}]"
+                    else:
+                        print(f"⚠️  Could not extract {write_key}")
+                        globals_schema[write_key] = []
         
         # Store results
         node_data['status'] = 'completed'

@@ -22,6 +22,7 @@ Responsibilities:
   6. Report result back to SwarmRunner via the updated Task dict.
 """
 
+import json
 import logging
 from typing import Any
 
@@ -236,18 +237,29 @@ class WorkerAgent:
             return task.model_dump()
 
         # ── 100%: done ─────────────────────────────────────────────────
-        # AgentRunner returns a dict; extract result text and usage
-        result_text: str = (
-            agent_output.get("result")
-            or agent_output.get("output")
-            or agent_output.get("response")
-            or str(agent_output)
-        )
+        # AgentRunner returns: {"success": bool, "output": dict|str, ...}
+        # Check if the agent actually succeeded
+        if not agent_output.get("success", False):
+            error_msg = agent_output.get("error", "Unknown agent error")
+            logger.error(f"[Worker:{self.agent_id}] AgentRunner returned failure: {error_msg}")
+            task.status = TaskStatus.FAILED
+            task.result = f"Agent error: {error_msg}"
+            task.token_used = int(agent_output.get("input_tokens", 0) + agent_output.get("output_tokens", 0))
+            task.cost_usd = float(agent_output.get("cost", 0.0))
+            await self._emit_progress(task_id, title, pct=100, result=task.result)
+            return task.model_dump()
 
-        # Cost / token data — AgentRunner may include this via calculate_cost()
-        cost_info: dict[str, Any] = agent_output.get("cost_info", {})
-        task.token_used = int(cost_info.get("total_tokens", 0))
-        task.cost_usd   = float(cost_info.get("cost", 0.0))
+        # Extract the output dict — cost data is merged into it by AgentRunner
+        output_data: Any = agent_output.get("output", {})
+
+        # Cost / token data — AgentRunner merges calculate_cost() into output dict
+        if isinstance(output_data, dict):
+            task.token_used = int(output_data.get("total_tokens", 0))
+            task.cost_usd   = float(output_data.get("cost", 0.0))
+            # Serialize as JSON so the frontend can parse it cleanly
+            result_text = json.dumps(output_data, default=str)
+        else:
+            result_text = str(output_data)
 
         task.status = TaskStatus.COMPLETED
         task.result = result_text.strip() if isinstance(result_text, str) else str(result_text)

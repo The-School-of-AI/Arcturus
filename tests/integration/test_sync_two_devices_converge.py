@@ -75,7 +75,7 @@ class _FakeStore:
             self._memories.append(m)
         return True
 
-    def get_all(self, limit=None, filter_metadata=None):
+    def get_all(self, limit=None, filter_metadata=None, include_deleted=False, **kwargs):
         out = list(self._memories)
         if limit:
             out = out[:limit]

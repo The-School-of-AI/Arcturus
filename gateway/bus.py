@@ -296,8 +296,12 @@ class MessageBus:
                 return ingest_result
 
             reply_text = ""
+            reply_kwargs: dict[str, Any] = {}
             if ingest_result.agent_response:
                 reply_text = ingest_result.agent_response.get("reply", "")
+                # Forward reply_markup (inline keyboards) from agent to channel
+                if "reply_markup" in ingest_result.agent_response:
+                    reply_kwargs["reply_markup"] = ingest_result.agent_response["reply_markup"]
 
             print(f"[BUS] reply_text ({len(reply_text)} chars): {reply_text[:120] if reply_text else '(empty)'}")
             if not reply_text:
@@ -318,7 +322,20 @@ class MessageBus:
                 recipient_id=reply_recipient,
                 text=reply_text,
                 attachments=envelope.attachments,
+                **reply_kwargs,
             )
+
+            # Send file attachments (e.g. PDF from Forge) if present
+            if ingest_result.agent_response and ingest_result.agent_response.get("file_path"):
+                adapter = self.adapters.get(envelope.channel)
+                if adapter and hasattr(adapter, "send_document"):
+                    file_path = ingest_result.agent_response["file_path"]
+                    caption = ingest_result.agent_response.get("file_caption", "")
+                    try:
+                        await adapter.send_document(reply_recipient, file_path, caption=caption)
+                    except Exception as exc:
+                        logger.warning("Bus: file delivery failed: %s", exc)
+
             # Merge ingest metadata into the deliver result for full context.
             deliver_result.operation = "roundtrip"
             deliver_result.session_id = ingest_result.session_id

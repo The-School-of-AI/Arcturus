@@ -158,12 +158,12 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <div className={cn(
-            "fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md animate-in fade-in duration-200",
-            isDark ? "bg-black/70" : "bg-white/70"
+            "fixed inset-0 z-50 flex items-center justify-center animate-in fade-in duration-200",
+            isDark ? "bg-black/70" : "bg-accent"
         )}>
             <div className={cn(
-                "w-[calc(100vw-40px)] h-[calc(100vh-40px)] overflow-hidden rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-300",
-                isDark ? "bg-background/98 border border-border/50 backdrop-blur-xl" : "bg-slate-50/95 border border-slate-200 backdrop-blur-xl"
+                "w-[calc(100vw-40px)] h-[calc(100vh-40px)] overflow-hidden rounded-2xl shadow-sm animate-in slide-in-from-bottom-4 duration-300",
+                isDark ? "bg-background/98 border border-border/50" : "bg-slate-50/95 border border-slate-200"
             )}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-gradient-to-r from-cyan-500/10 to-violet-500/10">
@@ -631,7 +631,7 @@ const KPICard: React.FC<KPICardProps> = ({ icon: Icon, label, value, color, isDa
             <Icon className="w-4 h-4 text-white" />
         </div>
         <p className="text-xl font-bold text-foreground">{value}</p>
-        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
     </div>
 );
 

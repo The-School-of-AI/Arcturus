@@ -24,6 +24,7 @@ export const ElectronBrowserView: React.FC = () => {
         closeAllNewsTabs,
         openNewsTab,
         addSelectedContext,
+        showNewsChatPanel,
         setShowNewsChatPanel,
         sidebarTab
     } = useAppStore();
@@ -80,6 +81,14 @@ export const ElectronBrowserView: React.FC = () => {
         resizeObserverRef.current.observe(containerRef.current);
         window.addEventListener('resize', updateBounds);
 
+        // Listen for app zoom changes (Ctrl+/-) via devicePixelRatio media query
+        const dprMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+        const handleDprChange = () => {
+            // DPR changed = app zoom changed, recalculate bounds
+            updateBounds();
+        };
+        dprMediaQuery.addEventListener('change', handleDprChange);
+
         // Initial bounds update with delay to ensure layout is complete
         const timer = setTimeout(() => {
             updateBounds();
@@ -89,6 +98,7 @@ export const ElectronBrowserView: React.FC = () => {
             clearTimeout(timer);
             resizeObserverRef.current?.disconnect();
             window.removeEventListener('resize', updateBounds);
+            dprMediaQuery.removeEventListener('change', handleDprChange);
         };
     }, [updateBounds]);
 
@@ -104,6 +114,18 @@ export const ElectronBrowserView: React.FC = () => {
             window.electronAPI.send('browser:hide-all', {});
         }
     }, [sidebarTab, updateBounds]);
+
+    // Re-position native BrowserView when the chat/insights panel opens or closes.
+    // The CSS layout shifts (left sidebar removed, right panel added) but the native
+    // view is positioned via absolute pixel coords and needs an explicit IPC update.
+    useEffect(() => {
+        if (sidebarTab !== 'news') return;
+        // Immediate update for the new layout
+        updateBounds();
+        // Delayed update to catch any CSS transition settling
+        const t = setTimeout(updateBounds, 350);
+        return () => clearTimeout(t);
+    }, [showNewsChatPanel, updateBounds, sidebarTab]);
 
     // Subscribe to browser events from main process
     useEffect(() => {
@@ -390,7 +412,7 @@ export const ElectronBrowserView: React.FC = () => {
 
                 <button
                     onClick={closeAllNewsTabs}
-                    className="text-[10px] text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tighter transition-colors"
+                    className="text-xs text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tight transition-colors"
                 >
                     Close All
                 </button>
@@ -450,7 +472,7 @@ export const ElectronBrowserView: React.FC = () => {
                         >
                             <Minus className="w-3 h-3" />
                         </button>
-                        <span className="text-[10px] px-1 min-w-[3ch] text-center font-mono">{zoomLevel}%</span>
+                        <span className="text-xs px-1 min-w-[3ch] text-center font-mono">{zoomLevel}%</span>
                         <button
                             onClick={() => setZoomLevel(Math.min(200, zoomLevel + 10))}
                             className="p-1 hover:bg-background rounded-r-md transition-colors text-muted-foreground"
@@ -463,7 +485,7 @@ export const ElectronBrowserView: React.FC = () => {
                     {/* Add to Context */}
                     <button
                         onClick={addSelectionToContext}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-cyan-400 hover:bg-cyan-500/10 rounded-md transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 text-xs font-bold uppercase tracking-wide text-cyan-400 hover:bg-cyan-500/10 rounded-md transition-colors"
                         title="Add selected text to context"
                     >
                         <PlusCircle className="w-3 h-3" />

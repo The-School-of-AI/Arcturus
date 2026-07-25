@@ -18,7 +18,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({ className }) => {
             size="sm"
             className={cn(
                 "h-8 w-8 p-0 transition-all",
-                isDark ? "text-muted-foreground hover:text-primary" : "text-primary hover:text-foreground",
+                "text-muted-foreground hover:text-foreground",
                 className
             )}
             onClick={toggleTheme}

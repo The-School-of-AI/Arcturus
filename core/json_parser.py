@@ -73,4 +73,10 @@ def parse_llm_json(text: str, required_keys: list[str] = None, debug: bool = Fal
         except Exception:
             if debug: print("[DEBUG] Repair attempt failed.")
 
+    # Last resort: if the LLM returned plain text/markdown instead of JSON,
+    # wrap it into a minimal valid structure so the pipeline can continue.
+    stripped = text.strip()
+    if stripped and "{" not in stripped:
+        return {"markdown_report": stripped, "final_format": "markdown", "call_self": False}
+
     raise JsonParsingError("All attempts to parse JSON from LLM output failed.")

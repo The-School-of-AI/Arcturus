@@ -36,14 +36,14 @@ def check_mongodb() -> HealthResult:
 
 
 def check_qdrant() -> HealthResult:
-    """Check Qdrant REST API health endpoint."""
+    """Check Qdrant REST API health endpoint (GET /healthz)."""
     import time
 
     try:
         import httpx
 
         url = get_qdrant_url().rstrip("/")
-        health_url = f"{url}/healthz"  # Qdrant uses /healthz, /livez, /readyz (not /health)
+        health_url = f"{url}/healthz"
         start = time.perf_counter()
         with httpx.Client(timeout=3.0) as client:
             resp = client.get(health_url)

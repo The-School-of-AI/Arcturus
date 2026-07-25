@@ -1,4 +1,5 @@
 import type { SlideTheme } from './SlideFrame';
+import { resolveSlideColors } from './theme-utils';
 import type { Slide } from '../normalizers';
 import { findElement } from '../normalizers';
 import { CodeBlockElement, BodyElement } from './elements';
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function CodeSlide({ slide, theme, isThumb }: Props) {
+  const sc = resolveSlideColors(slide.metadata?.slide_style, theme);
   const codeEl = findElement(slide, 'code');
   const bodyEl = findElement(slide, 'body');
 
@@ -19,8 +21,9 @@ export function CodeSlide({ slide, theme, isThumb }: Props) {
         <div
           className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
           style={{
-            color: theme.colors.primary,
-            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
+            color: sc.titleColor,
+            fontFamily: sc.titleFont,
+            ...sc.titleStyle,
           }}
         >
           {slide.title}
@@ -35,7 +38,7 @@ export function CodeSlide({ slide, theme, isThumb }: Props) {
 
       {bodyEl?.content && typeof bodyEl.content === 'string' && !isThumb && (
         <div className="mt-3">
-          <BodyElement content={bodyEl.content} theme={theme} isThumb={isThumb} />
+          <BodyElement content={bodyEl.content} theme={theme} isThumb={isThumb} bodyColor={sc.bodyColor} bodyStyle={sc.bodyStyle} accentColor={sc.accentColor} />
         </div>
       )}
     </div>

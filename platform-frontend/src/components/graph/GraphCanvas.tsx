@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ReactFlow, {
     Controls,
     Background,
@@ -10,6 +10,7 @@ import AgentNode from './AgentNode';
 import CustomEdge from './CustomEdge';
 import { useAppStore } from '@/store';
 import { API_BASE } from '@/lib/api';
+import axios from 'axios';
 
 // Helper component to handle auto-fitting inside the ReactFlow context
 const AutoFitter = ({ nodeCount }: { nodeCount: number }) => {
@@ -42,6 +43,7 @@ const EDGE_TYPES = {
 export const GraphCanvas: React.FC = () => {
     // Connect to Store
     const { nodes, edges, onNodesChange, onEdgesChange, selectNode, selectedNodeId } = useAppStore();
+    const [skeletonData, setSkeletonData] = useState<any[] | null>(null);
 
     const nodeTypes = useMemo(() => NODE_TYPES, []);
     const edgeTypes = useMemo(() => EDGE_TYPES, []);
@@ -94,16 +96,40 @@ export const GraphCanvas: React.FC = () => {
                 maxZoom={2}
             >
                 <Background color="#888" gap={20} size={1} className="opacity-20" />
-                <Controls className="glass-panel border-border fill-white" />
+                <Controls className="bg-card border border-border border-border fill-white" />
                 <div className="absolute top-4 right-4 z-50">
                     <button
-                        onClick={() => window.open(`${API_BASE}/optimizer/skeletons`, '_blank')}
-                        className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-md border border-white/10 hover:bg-black transition-colors flex items-center gap-2"
+                        onClick={async () => {
+                            try {
+                                const res = await axios.get(`${API_BASE}/optimizer/skeletons`, { timeout: 5000 });
+                                setSkeletonData(res.data && res.data.length > 0 ? res.data : null);
+                                if (!res.data || res.data.length === 0) {
+                                    setSkeletonData([{ _empty: true, message: "No episodic skeletons found yet. Run some queries first." }]);
+                                }
+                            } catch {
+                                setSkeletonData([{ _empty: true, message: "Backend unreachable." }]);
+                            }
+                        }}
+                        className="bg-background/50 text-foreground/50 text-xs px-3 py-1.5 rounded-md border border-border/30 hover:bg-background/80 hover:text-foreground/80 transition-colors flex items-center gap-2"
+                        title="View Skeletons"
                     >
                         <span>💀</span>
-                        {/* View Skeleton */}
                     </button>
                 </div>
+                {/* Skeleton JSON overlay */}
+                {skeletonData && (
+                    <div className="absolute inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-8">
+                        <div className="relative w-full max-w-2xl max-h-[80vh] bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Episodic Skeletons</span>
+                                <button onClick={() => setSkeletonData(null)} className="text-muted-foreground hover:text-foreground text-lg leading-none">&times;</button>
+                            </div>
+                            <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-foreground/80 whitespace-pre-wrap">
+                                {JSON.stringify(skeletonData, null, 2)}
+                            </pre>
+                        </div>
+                    </div>
+                )}
                 <AutoFitter nodeCount={visibleNodes.length} />
             </ReactFlow>
         </div>

@@ -241,7 +241,7 @@ class AgentLoop4:
             log_error(f"Failed to resume session: {e}")
             raise
 
-    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, space_id=None):
+    async def run(self, query, file_manifest, globals_schema, uploaded_files, session_id=None, memory_context=None, space_id=None, display_query=None, source="web"):
         """
         Main agent loop: bootstrap context with Query node, optionally run file distiller,
         then planning loop (PlannerAgent) -> merge plan -> execute DAG. Handles replanning when
@@ -279,7 +279,9 @@ class AgentLoop4:
                     bootstrap_graph,
                     session_id=session_id,
                     original_query=query,
-                    file_manifest=file_manifest
+                    file_manifest=file_manifest,
+                    display_query=display_query,
+                    source=source,
                 )
                 if space_id is not None:
                     self.context.plan_graph.graph["space_id"] = space_id
@@ -449,8 +451,15 @@ class AgentLoop4:
 
                         if self._should_replan():
                             log_step("♻️ Adaptive Re-planning: Clarification resolved, formulating next steps...", symbol="🔄")
+                            # Mark processed clarification leaves so they don't re-trigger
+                            for nid, nd in self.context.plan_graph.nodes(data=True):
+                                if (nd.get("agent") == "ClarificationAgent"
+                                        and nd.get("status") == "completed"
+                                        and not list(self.context.plan_graph.successors(nid))):
+                                    nd["_replan_consumed"] = True
                             self.context.plan_graph.nodes["Query"]["status"] = "running"
                             self.context._save_session()
+                            await asyncio.sleep(0.1)  # yield to event loop
                             continue
                         else:
                             return self.context
@@ -489,7 +498,7 @@ class AgentLoop4:
         Check if the graph needs expansion (re-planning).
         Conditions:
         1. All current nodes are finished (completed/skipped).
-        2. At least one ClarificationAgent recently completed.
+        2. At least one ClarificationAgent recently completed (and not yet consumed).
         3. That ClarificationAgent was a 'leaf' (had no successors in the current graph).
         """
         # If any node is still pending/running, we aren't at a dead end yet
@@ -498,7 +507,9 @@ class AgentLoop4:
 
         has_new_leaf_clarification = False
         for node_id, node_data in self.context.plan_graph.nodes(data=True):
-            if node_data.get("agent") == "ClarificationAgent" and node_data.get("status") == "completed":
+            if (node_data.get("agent") == "ClarificationAgent"
+                    and node_data.get("status") == "completed"
+                    and not node_data.get("_replan_consumed")):
                 # Check if it was a leaf node (no arrows coming out)
                 if not list(self.context.plan_graph.successors(node_id)):
                     has_new_leaf_clarification = True
@@ -1087,6 +1098,22 @@ class AgentLoop4:
                         if context._has_executable_code(output):
                             execution_result = await context._auto_execute_code(step_id, output)
                             iterations_data[-1]["execution_result"] = execution_result
+
+                            # If code execution FAILED, retry with error feedback instead of returning broken output
+                            if execution_result.get("status") == "error" and turn < max_turns:
+                                exec_error = execution_result.get("error", "Unknown error")
+                                log_step(f"⚠️ Code execution failed for {step_id}: {exec_error[:200]}. Retrying...", symbol="🔄")
+                                current_input = build_agent_input(
+                                    instruction=(
+                                        f"Your code execution FAILED with this error:\n\n```\n{exec_error}\n```\n\n"
+                                        "Fix the code and try again. Make sure you only use functions/variables that are available in the sandbox. "
+                                        "Available tools must be called via `call_tool`, not as Python functions."
+                                    ),
+                                    previous_output=output,
+                                    iteration_context={"execution_error": exec_error}
+                                )
+                                continue  # Retry in next iteration
+
                             # Merge so mark_done skips re-execution (avoids duplicate code.execution span)
                             output = context._merge_execution_results(output, execution_result)
                         return {"success": True, "output": output}

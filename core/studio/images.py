@@ -12,6 +12,7 @@ from google import genai
 from google.genai import types as genai_types
 from PIL import Image
 
+from config.gemini_client import get_gemini_client
 from core.model_manager import ModelManager
 
 load_dotenv()
@@ -40,7 +41,7 @@ def _get_image_model() -> str:
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        _client = get_gemini_client()
     return _client
 
 

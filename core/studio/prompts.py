@@ -4,11 +4,20 @@ from typing import Any, Dict
 from core.schemas.studio_schema import ArtifactType, Outline
 
 
-def get_outline_prompt(artifact_type: ArtifactType, user_prompt: str, parameters: dict[str, Any]) -> str:
+def get_outline_prompt(artifact_type: ArtifactType, user_prompt: str, parameters: dict[str, Any], slide_mode: str | None = None) -> str:
     """Build a system prompt requesting structured outline JSON from the LLM."""
 
     type_guidance = _get_type_specific_outline_guidance(artifact_type)
     params_str = json.dumps(parameters, indent=2) if parameters else "{}"
+
+    is_business = slide_mode == "business"
+
+    # Include theme catalog for slides so LLM can recommend the best theme (artistic only)
+    theme_section = ""
+    if artifact_type == ArtifactType.slides and not is_business:
+        theme_section = _get_theme_recommendation_guidance()
+
+    theme_field_schema = "" if is_business else _get_theme_field_schema(artifact_type)
 
     return f"""You are a content architect specializing in creating structured outlines.
 
@@ -19,13 +28,14 @@ User's request: {user_prompt}
 Additional parameters: {params_str}
 
 {type_guidance}
+{theme_section}
 
 Your task: Generate a structured outline for this {artifact_type.value}.
 
 Return ONLY valid JSON in this exact format:
 {{
   "title": "The title for this artifact",
-  "items": [
+{theme_field_schema}  "items": [
     {{
       "id": "1",
       "title": "Section/slide/tab title",
@@ -49,14 +59,87 @@ Rules:
 - Return ONLY the JSON object, no markdown fences or explanations"""
 
 
-def get_draft_prompt(artifact_type: ArtifactType, outline: Outline) -> str:
+def _get_theme_recommendation_guidance() -> str:
+    """Return theme recommendation guidance for the LLM prompt."""
+    from core.studio.slides.themes import get_theme_catalog_for_prompt
+    catalog = get_theme_catalog_for_prompt()
+    return f"""
+VISUAL STYLE & THEME (mandatory for slides):
+Design a custom color palette and style that matches the user's topic, tone, and audience.
+Analyze the prompt for style cues: "dark", "tech", "investor", "creative", "minimal", etc.
+
+Reference these existing themes for inspiration (pick the closest as recommended_theme_id):
+{catalog}
+
+Then CREATE your own custom color palette in the "custom_style" field:
+
+CRITICAL COLOR RULES:
+- Background MUST be very light (near white like #F5F5F5) or very dark (near black like #0D0D1A)
+- NEVER use mid-tone backgrounds (no #808080, #666666, etc.)
+- Text must have strong contrast against background (dark text on light bg, light text on dark bg)
+- Primary and accent colors should be from different hue families (not both blue)
+- Avoid neon-bright or fully saturated colors — use rich but tasteful tones
+- font_style: "modern" (clean sans-serif), "formal" (serif headings), "warm" (friendly serif), "bold" (impact sans-serif)
+- background_style: "gradient" for dynamic feel, "solid" for clean professional look"""
+
+
+def _get_theme_field_schema(artifact_type: ArtifactType) -> str:
+    """Return the custom_style field for the JSON schema if slides."""
+    if artifact_type == ArtifactType.slides:
+        return """  "recommended_theme_id": "closest-base-theme-id",
+  "custom_style": {
+    "name": "Your Theme Name",
+    "colors": {
+      "primary": "#hex",
+      "secondary": "#hex",
+      "accent": "#hex",
+      "background": "#hex",
+      "text": "#hex",
+      "text_light": "#hex",
+      "title_background": "#hex"
+    },
+    "font_style": "modern|formal|warm|bold",
+    "background_style": "solid|gradient"
+  },
+"""
+    return ""
+
+
+def get_draft_prompt(artifact_type: ArtifactType, outline: Outline, creation_prompt: str | None = None, slide_mode: str | None = None) -> str:
     """Build a system prompt requesting full content_tree JSON from an approved outline."""
 
+    is_business = slide_mode == "business"
+
     outline_json = json.dumps(outline.model_dump(mode="json"), indent=2)
-    type_schema = _get_type_specific_draft_schema(artifact_type)
 
-    return f"""You are a professional content creator. Generate a complete {artifact_type.value} based on the approved outline below.
+    if is_business and artifact_type == ArtifactType.slides:
+        type_schema = _get_business_draft_schema_slides()
+    else:
+        type_schema = _get_type_specific_draft_schema(artifact_type)
 
+    # For artistic slides: user's original prompt is THE creative brief — pass it through
+    user_intent_section = ""
+    if creation_prompt and creation_prompt.strip() and not is_business:
+        user_intent_section = f"""
+═══════════════════════════════════════════════════════════════════
+USER'S CREATIVE BRIEF (THIS IS YOUR PRIMARY DESIGN DIRECTION):
+═══════════════════════════════════════════════════════════════════
+{creation_prompt.strip()}
+
+You MUST honor the user's design intent above. Their visual direction, color choices, typography
+preferences, layout style, and aesthetic vision take ABSOLUTE priority over any generic defaults.
+═══════════════════════════════════════════════════════════════════
+"""
+
+    if is_business and artifact_type == ArtifactType.slides:
+        role = "professional content creator"
+    elif artifact_type == ArtifactType.slides:
+        role = "world-class presentation designer and visual storyteller"
+    else:
+        role = "professional content creator"
+
+    return f"""You are a {role}. Generate a complete {artifact_type.value} based on the approved outline below.
+{user_intent_section}
 Approved outline:
 {outline_json}
 
@@ -129,10 +212,9 @@ def _get_type_specific_outline_guidance(artifact_type: ArtifactType) -> str:
     return ""
 
 
-def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
-    """Return the exact JSON schema the LLM should produce for the draft."""
-    if artifact_type == ArtifactType.slides:
-        return """Generate a SlidesContentTree JSON with this exact schema:
+def _get_business_draft_schema_slides() -> str:
+    """Return the structured-only JSON schema for business-mode slides (no HTML)."""
+    return """Generate a SlidesContentTree JSON with this exact schema:
 {
   "deck_title": "Presentation title",
   "subtitle": "Optional subtitle",
@@ -188,6 +270,8 @@ For timeline slides: bullet_list items formatted as "Date | Event Title | Descri
 For comparison slides: include a callout_box element with a synthesizing insight
 For title slides: set metadata.date and metadata.category for enhanced visuals
 
+IMPORTANT: Do NOT include an "html" field on any slide. Business mode uses structured elements only.
+
 SLIDE CONTENT DENSITY RULES (mandatory):
 - MAX 6 bullets per slide, MAX 8 words per bullet
 - MAX 3 short sentences per body element (25 words max per sentence)
@@ -204,6 +288,142 @@ SPEAKER NOTES REQUIREMENTS (mandatory for every slide):
 - Do NOT repeat bullet points or body text verbatim in notes
 - Title/closing slides may have 1-2 shorter sentences
 - Target 15-60 words per slide's speaker notes"""
+
+
+def _get_type_specific_draft_schema(artifact_type: ArtifactType) -> str:
+    """Return the exact JSON schema the LLM should produce for the draft."""
+    if artifact_type == ArtifactType.slides:
+        return """
+╔═══════════════════════════════════════════════════════════════════╗
+║  YOU ARE DESIGNING VISUAL SLIDES, NOT FILLING IN TEMPLATES.      ║
+║  The "html" field IS the slide. It is what the user SEES.        ║
+║  Every slide must be a UNIQUE visual composition.                ║
+║  If the user gave design direction, FOLLOW IT EXACTLY.           ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+Generate a SlidesContentTree JSON:
+{
+  "deck_title": "Presentation title",
+  "subtitle": "Optional subtitle",
+  "slides": [
+    {
+      "id": "s1",
+      "slide_type": "content",
+      "title": "Slide title (plain text for PPTX export)",
+      "elements": [{"id": "s1_e1", "type": "body", "content": "Text here"}],
+      "speaker_notes": "2-4 sentences for the presenter",
+      "metadata": {"slide_style": {"background": {"value": "#hex"}, "title": {"color": "..."}, "body": {"color": "..."}, "accentColor": "#hex"}},
+      "html": "<div style='width:100%;height:100%;position:relative;overflow:hidden;box-sizing:border-box;background:#1a1a2e;padding:7% 6%;'><p style='font-size:48px;font-weight:900;color:#fff;'>YOUR VISUAL MASTERPIECE</p></div>"
+    }
+  ],
+  "metadata": {"audience": "...", "tone": "...", "fonts": ["FontName1", "FontName2"]}
+}
+
+═══════════════════════════════════════════════════════════════════
+THE HTML FIELD — THIS IS WHAT THE USER SEES (MANDATORY every slide)
+═══════════════════════════════════════════════════════════════════
+
+Your HTML is rendered DIRECTLY inside a 16:9 container (~960×540px). You have COMPLETE creative freedom.
+The html field is NOT a fallback or extra — it IS the presentation. Design each slide as a visual artwork.
+
+TECHNICAL RULES:
+1. Root <div> must have: style='width:100%;height:100%;position:relative;overflow:hidden;box-sizing:border-box;'
+2. ONLY inline styles. No <style> tags, no CSS classes.
+3. ⚠️ CRITICAL JSON SAFETY: Use SINGLE QUOTES for ALL HTML attribute values (style='...' NOT style="...").
+   The html field is a JSON string wrapped in double quotes, so HTML double quotes WILL BREAK the JSON.
+   ALWAYS write: <div style='color:red;'> NEVER: <div style="color:red;">
+4. IMAGES: <img data-placeholder='true' alt='descriptive search query' style='...' />
+   No src attribute — the system resolves real images from alt text.
+5. SVG: Inline <svg> elements are encouraged for shapes, icons, diagrams, patterns, data viz.
+6. FONTS: font-family:'Google Font Name',fallback. List used fonts in metadata.fonts (max 3).
+7. FORBIDDEN: <script>, <iframe>, <form>, <style>, event handlers.
+
+DESIGN MANDATE:
+- If the user asked for specific aesthetics (Swiss design, minimalism, dark theme, etc.), YOUR HTML MUST REFLECT THAT.
+- Each slide must have a DIFFERENT layout and visual treatment. No two slides should look alike.
+- Use the full visual vocabulary: gradients, SVG decorations, layered positioning, dramatic typography,
+  glassmorphism, geometric shapes, bold whitespace, cinematic color, typographic hierarchy.
+- Think: Apple keynotes, Swiss design posters, Dieter Rams, Pitch.com, Figma presentations.
+- Typography IS design. Use massive type, extreme weight contrast, precise spacing, letter-spacing.
+- NEVER default to generic bullet-point layouts. Be creative with how information is presented.
+
+EXAMPLE — a typographic title slide (notice: ALL single quotes in HTML attributes):
+<div style='width:100%;height:100%;position:relative;overflow:hidden;box-sizing:border-box;background:#ffffff;padding:8% 7%;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;'>
+  <svg style='position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);opacity:0.04;' viewBox='0 0 800 200'><text x='400' y='150' text-anchor='middle' font-size='200' font-weight='900' fill='#000'>Aa</text></svg>
+  <div style='position:absolute;top:12%;left:7%;width:3px;height:30%;background:#E10600;'></div>
+  <div style='position:absolute;top:50%;left:7%;transform:translateY(-50%);'>
+    <p style='margin:0;font-size:64px;font-weight:900;color:#000;line-height:0.95;letter-spacing:-0.03em;'>HELVETICA</p>
+    <p style='margin:16px 0 0;font-size:16px;font-weight:300;color:#666;letter-spacing:0.2em;text-transform:uppercase;'>The Unseen Architecture of Modern Design</p>
+  </div>
+  <p style='position:absolute;bottom:7%;left:7%;margin:0;font-size:10px;color:#999;letter-spacing:0.15em;'>1957 — SWITZERLAND</p>
+</div>
+
+EXAMPLE — a data/content slide with visual treatment (ALL single quotes):
+<div style='width:100%;height:100%;position:relative;overflow:hidden;box-sizing:border-box;background:linear-gradient(160deg,#0a0a0a 0%,#1a1a2e 100%);padding:7% 6%;font-family:Inter,sans-serif;'>
+  <div style='position:absolute;top:0;right:0;width:40%;height:100%;background:linear-gradient(180deg,rgba(225,6,0,0.08),transparent);'></div>
+  <p style='margin:0 0 6px;font-size:10px;letter-spacing:0.2em;color:#E10600;font-weight:700;text-transform:uppercase;'>GLOBAL REACH</p>
+  <h2 style='margin:0 0 30px;font-size:36px;font-weight:800;color:#fff;line-height:1.1;'>Used by 60%% of Fortune 500</h2>
+  <div style='display:grid;grid-template-columns:repeat(3,1fr);gap:20px;'>
+    <div style='padding:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;'>
+      <p style='margin:0;font-size:36px;font-weight:900;color:#E10600;'>500+</p>
+      <p style='margin:6px 0 0;font-size:12px;color:#888;'>Brands worldwide</p>
+    </div>
+    <div style='padding:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;'>
+      <p style='margin:0;font-size:36px;font-weight:900;color:#fff;'>1957</p>
+      <p style='margin:6px 0 0;font-size:12px;color:#888;'>Year created</p>
+    </div>
+    <div style='padding:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;'>
+      <p style='margin:0;font-size:36px;font-weight:900;color:#fff;'>∞</p>
+      <p style='margin:6px 0 0;font-size:12px;color:#888;'>Applications</p>
+    </div>
+  </div>
+</div>
+
+═══════════════════════════════════════════════════════════════════
+STRUCTURED FIELDS (secondary — for PPTX export only):
+═══════════════════════════════════════════════════════════════════
+These fields exist alongside html purely for PPTX export compatibility:
+- slide_type: pick best fit (content, two_column, stat, image_text, etc.)
+- title: plain slide title string
+- elements: array of element objects (see EXACT FORMAT below)
+- speaker_notes: 2-4 sentences of presenter guidance (mandatory every slide)
+- metadata.slide_style: background + title/body colors + accentColor
+
+ELEMENT EXACT FORMAT — every element MUST have these 3 fields:
+{
+  "id": "s1_e1",     ← REQUIRED unique string (use pattern: s{slide_num}_e{element_num})
+  "type": "body",    ← REQUIRED string (body, bullet_list, title, subtitle, image, chart, stat_callout, etc.)
+  "content": "..."   ← REQUIRED (string, array, or object depending on type)
+}
+⚠️ DO NOT use "text_content", "text", "value", or "description" — the field name is ALWAYS "content".
+⚠️ DO NOT omit "id" — every element needs a unique id string.
+
+ELEMENT CONTENT FORMATS (for the "content" field):
+- body: plain string
+- bullet_list: JSON array of short strings
+- kicker: 2-5 word phrase
+- chart: {"chart_type":"bar|line|pie|scatter","title":"...","categories":[...],"series":[{"name":"...","values":[...]}]}
+- stat_callout: [{"value":"85%","label":"Satisfaction"},...]
+- table_data: {"headers":[...],"rows":[[...]...],"badge_column":2}
+- image: {"alt":"description for image search"}
+- callout_box: {"text":"...","attribution":"Source"}
+- timeline bullet_list: "Date | Title | Description | TAG" pipe-delimited
+- agenda bullet_list: "Title: Description" colon-delimited
+
+SLIDE CONTENT DENSITY:
+- MAX 6 bullets per slide, MAX 8 words per bullet
+- MAX 3 short sentences per body (25 words each)
+- 30% on slide, 70% in speaker_notes
+- NO placeholder text ("TBD", "Lorem ipsum")
+
+SPEAKER NOTES (mandatory every slide):
+- 2-4 sentences, 15-60 words
+- Include key talking point NOT on the slide
+- Include transition or audience callout
+
+FONTS (deck-level metadata):
+In top-level metadata, include: "fonts": ["Font1", "Font2"] — list all Google Font names used in your HTML (max 3).
+Always use web-safe fallbacks in font-family declarations."""
 
     elif artifact_type == ArtifactType.document:
         return """Generate a DocumentContentTree JSON with this exact schema:
@@ -314,14 +534,27 @@ def get_draft_prompt_with_sequence(
     artifact_type: ArtifactType,
     outline: "Outline",
     slide_sequence: list[dict] | None = None,
+    creation_prompt: str | None = None,
+    slide_mode: str | None = None,
 ) -> str:
     """Enhanced draft prompt that includes planned slide sequence."""
-    base_prompt = get_draft_prompt(artifact_type, outline)
+    base_prompt = get_draft_prompt(artifact_type, outline, creation_prompt=creation_prompt, slide_mode=slide_mode)
+
+    is_business = slide_mode == "business"
 
     if slide_sequence and artifact_type == ArtifactType.slides:
-        sequence_hint = "\n\nPlanned slide sequence — You MUST use the exact slide_type specified for each position. Do NOT substitute content or image_text for the assigned type:\n"
+        if is_business:
+            # Business mode: strict type enforcement, no HTML
+            sequence_hint = "\n\nPlanned slide sequence — You MUST use the exact slide_type specified for each position. Do NOT substitute content or image_text for the assigned type:\n"
+        else:
+            # Artistic mode: suggested types, HTML emphasis
+            sequence_hint = "\n\nPlanned slide sequence (suggested types — you may override if your HTML design calls for a different approach):\n"
+
         for i, s in enumerate(slide_sequence, 1):
-            sequence_hint += f"  Slide {i}: slide_type={s['slide_type']} (MANDATORY), position={s['position']}\n"
+            if is_business:
+                sequence_hint += f"  Slide {i}: slide_type={s['slide_type']} (MANDATORY), position={s['position']}\n"
+            else:
+                sequence_hint += f"  Slide {i}: slide_type={s['slide_type']}, position={s['position']}\n"
 
         # Count content vs structural for mapping guidance
         content_count = sum(1 for s in slide_sequence if s["position"] == "body" and s["slide_type"] not in ("title", "section_divider"))
@@ -332,6 +565,14 @@ def get_draft_prompt_with_sequence(
             "Opening, closing, and section_divider slides are structural — generate "
             "appropriate content for them based on the deck's topic, not from specific outline items.\n"
         )
+
+        if not is_business:
+            sequence_hint += (
+                "\nIMPORTANT: The html field is what the user SEES. The slide_type and elements fields "
+                "are for PPTX export only. Your HTML should be a VISUAL MASTERPIECE for each slide. "
+                "Do NOT make all slides look the same — vary layouts, colors, typography dramatically.\n"
+            )
+
         base_prompt += sequence_hint
 
     return base_prompt

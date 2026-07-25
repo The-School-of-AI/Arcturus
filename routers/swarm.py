@@ -124,7 +124,7 @@ async def start_swarm_run(body: StartSwarmRequest, background_tasks: BackgroundT
     async def _run():
         try:
             await runner.initialize()
-            await runner.run_request(body.query)
+            await runner.run_request(body.query, session_id=run_id)
         except Exception as exc:
             logger.error(f"[Swarm:{run_id}] run failed: {exc}")
 

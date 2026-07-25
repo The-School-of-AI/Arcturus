@@ -14,4 +14,22 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy vendor libraries into separate chunks so they're cached
+        // independently and don't bloat the main bundle.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-monaco': ['@monaco-editor/react', 'monaco-editor'],
+          'vendor-pdf': ['@react-pdf-viewer/core', '@react-pdf-viewer/default-layout'],
+          'vendor-graph': ['reactflow', 'vis-network', 'vis-data'],
+          'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit'],
+          'vendor-terminal': ['xterm', 'xterm-addon-fit', 'xterm-addon-web-links'],
+          'vendor-ui': ['recharts', 'mermaid'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
 })

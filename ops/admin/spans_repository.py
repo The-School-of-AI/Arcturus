@@ -23,7 +23,7 @@ def get_spans_collection() -> Optional[Collection]:
 
         watchtower = load_settings().get("watchtower", {})
         uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-        client = MongoClient(uri)
+        client = MongoClient(uri, serverSelectionTimeoutMS=3000)
         return client["watchtower"]["spans"]
     except Exception:
         return None
@@ -215,15 +215,6 @@ class SpansRepository:
             {"$sort": {"start_time": -1}},
             {"$limit": limit},
             _traces_add_fields_stage(),
-            {
-                "$match": {
-                    "$or": [
-                        {"session_id": {"$ne": None}},
-                        {"run_id": {"$exists": True, "$ne": None, "$ne": ""}},
-                        {"has_throttled_span": True},
-                    ]
-                }
-            },
             _traces_project_stage(),
         ]
         cursor = self._coll.aggregate(pipeline)

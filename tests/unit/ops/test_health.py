@@ -58,7 +58,7 @@ class TestCheckQdrant:
     """Tests for check_qdrant behavior."""
 
     def test_returns_ok_when_health_endpoint_returns_200(self):
-        """When Qdrant /health returns 200, returns status ok."""
+        """When Qdrant /healthz returns 200, returns status ok."""
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_client = MagicMock()

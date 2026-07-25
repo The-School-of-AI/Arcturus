@@ -54,6 +54,19 @@ from memory.user_id import get_user_id
 from memory.lifecycle import initialize_payload
 
 
+def _sanitize_payload_for_qdrant(obj: Any) -> Any:
+    """Replace None/NaN in payload so Qdrant JSON serialization does not fail."""
+    if obj is None:
+        return ""
+    if isinstance(obj, float) and (obj != obj or obj == float("inf") or obj == float("-inf")):
+        return 0.0
+    if isinstance(obj, dict):
+        return {k: _sanitize_payload_for_qdrant(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_payload_for_qdrant(v) for v in obj]
+    return obj
+
+
 def _distance_from_str(s: str):
     m = {"cosine": Distance.COSINE, "euclidean": Distance.EUCLID, "dot": Distance.DOT}
     return m.get((s or "cosine").lower(), Distance.COSINE)
@@ -83,19 +96,28 @@ class QdrantVectorStore:
         self.client = QdrantClient(url=self.url, api_key=api_key, timeout=10.0)
         self._scanned_runs_path = Path(scanned_runs_path) if scanned_runs_path else Path(__file__).parent.parent.parent / "memory" / "remme_index" / "scanned_runs.json"
         self._ensure_collection()
-        self._has_sparse = self._check_has_sparse()
-        log_step(f"✅ QdrantVectorStore initialized: {self.url}/{self.collection_name}", symbol="🔧")
+        self._has_sparse, self._is_named = self._check_collection_capabilities()
+        log_step(f"✅ QdrantVectorStore initialized: {self.url}/{self.collection_name} (sparse={self._has_sparse}, named={self._is_named})", symbol="🔧")
 
-    def _check_has_sparse(self) -> bool:
-        """Check if collection has sparse vectors (Phase C)."""
+    def _check_collection_capabilities(self) -> tuple[bool, bool]:
+        """Check if collection has sparse vectors and if it uses named vectors."""
         try:
             info = self.client.get_collection(self.collection_name)
-            sparse = getattr(info.config, "params", None) and getattr(
-                info.config.params, "sparse_vectors", None
-            )
-            return bool(sparse and "text-bm25" in sparse)
+            params = getattr(info.config, "params", None)
+            if not params:
+                return False, False
+            
+            # Check for named vectors
+            v_config = getattr(params, "vectors_config", None)
+            is_named = isinstance(v_config, dict)
+            
+            # Check for sparse vectors
+            sparse = getattr(params, "sparse_vectors", None)
+            has_sparse = bool(sparse and "text-bm25" in sparse)
+            
+            return has_sparse, is_named
         except Exception:
-            return False
+            return False, False
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
@@ -235,6 +257,11 @@ class QdrantVectorStore:
         space_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
+        if not embedding_list or len(embedding_list) != self.dimension:
+            log_error(
+                f"Memory add: invalid embedding (len={len(embedding_list)}, expected {self.dimension}). Using zero vector."
+            )
+            embedding_list = [0.0] * self.dimension
         if deduplication_threshold > 0:
             min_similarity = 1.0 - deduplication_threshold  # e.g. 0.85 for threshold 0.15
             similar = self.search(
@@ -285,6 +312,7 @@ class QdrantVectorStore:
 
         # Initialize lifecycle-related fields (importance, access_count, archived, last_accessed_at).
         initialize_payload(payload)
+        payload = _sanitize_payload_for_qdrant(payload)
 
         # Phase C: include sparse vector when collection has text-bm25
         if self._has_sparse and text:
@@ -293,7 +321,9 @@ class QdrantVectorStore:
                 idx, vals = embed_sparse_single(text)
                 vec_data = {"default": embedding_list, "text-bm25": SparseVector(indices=idx, values=vals)}
             except Exception:
-                vec_data = embedding_list
+                vec_data = {"default": embedding_list} if self._is_named else embedding_list
+        elif self._is_named:
+            vec_data = {"default": embedding_list}
         else:
             vec_data = embedding_list
         point = PointStruct(id=memory_id, vector=vec_data, payload=payload)
@@ -340,6 +370,7 @@ class QdrantVectorStore:
         k: int = 10,
         score_threshold: Optional[float] = None,
         filter_metadata: Optional[Dict[str, Any]] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         query_vector = query_vector.tolist() if isinstance(query_vector, np.ndarray) else list(query_vector)
         merged_filter = self._tenant_filter(filter_metadata)
@@ -357,6 +388,16 @@ class QdrantVectorStore:
                     )
             if conditions:
                 search_filter = Filter(must=conditions)
+            
+        if not include_deleted:
+            deleted_filter = FieldCondition(key="deleted", match=MatchValue(value=True))
+            if search_filter:
+                if search_filter.must_not:
+                    search_filter.must_not.append(deleted_filter)
+                else:
+                    search_filter.must_not = [deleted_filter]
+            else:
+                search_filter = Filter(must_not=[deleted_filter])
 
         distance_threshold = 1.0 - score_threshold if score_threshold is not None else None
 
@@ -426,7 +467,7 @@ class QdrantVectorStore:
         )
         if score_threshold is not None:
             kwargs["score_threshold"] = score_threshold
-        if self._has_sparse:
+        if self._is_named:
             kwargs["using"] = "default"
         return self.client.query_points(**kwargs)
 
@@ -467,6 +508,8 @@ class QdrantVectorStore:
                 if self._is_tenant and current_user_id:
                     if payload.get(self._tenant_keyword_field) != current_user_id:
                         return None
+                if payload.get("deleted") is True:
+                    return None
                 return {"id": str(p.id), **payload}
             return None
         except Exception as e:
@@ -491,10 +534,19 @@ class QdrantVectorStore:
                 updated["text"] = text
             if metadata:
                 updated.update(metadata)
+            updated = _sanitize_payload_for_qdrant(updated)
             vec = embedding.tolist() if embedding is not None else self._get_vector_for_point(memory_id)
             if vec is None:
                 return False
-            point = PointStruct(id=memory_id, vector=vec, payload=updated)
+            if len(vec) != self.dimension:
+                log_error(f"Memory update: invalid embedding len={len(vec)}, expected {self.dimension}. Skipping update.")
+                return False
+            
+            if self._is_named:
+                vec_data = {"default": vec}
+            else:
+                vec_data = vec
+            point = PointStruct(id=memory_id, vector=vec_data, payload=updated)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             log_step(f"✏️ Updated memory: {memory_id[:8]}...", symbol="🔄")
             return True
@@ -512,7 +564,9 @@ class QdrantVectorStore:
             )
             if pts and hasattr(pts[0], "vector"):
                 v = pts[0].vector
-                return v if isinstance(v, list) else v.tolist()
+                if isinstance(v, dict):
+                    v = v.get("default")
+                return v if isinstance(v, list) else v.tolist() if v is not None else None
         except Exception:
             pass
         return None
@@ -527,9 +581,28 @@ class QdrantVectorStore:
         """
         Phase 4 Sync: upsert memory with explicit id (for applying pulled changes).
         Skips KG ingest (caller handles separately if needed).
+        Uses same vector shape as add(): named "default" (and "text-bm25" when sparse) when collection has sparse vectors.
         """
         try:
             vec = embedding.tolist() if isinstance(embedding, np.ndarray) else list(embedding)
+            if not vec or len(vec) != self.dimension:
+                log_error(f"Sync upsert: invalid embedding len={len(vec)}, expected {self.dimension}. Using zero vector.")
+                vec = [0.0] * self.dimension
+            # Match add(): handle named vs unnamed vectors correctly
+            if self._has_sparse:
+                if text:
+                    try:
+                        from memory.sparse_embedding import embed_sparse_single
+                        idx, vals = embed_sparse_single(text)
+                        vec_data = {"default": vec, "text-bm25": SparseVector(indices=idx, values=vals)}
+                    except Exception:
+                        vec_data = {"default": vec}
+                else:
+                    vec_data = {"default": vec}
+            elif self._is_named:
+                vec_data = {"default": vec}
+            else:
+                vec_data = vec
             merged = dict(payload)
             merged["text"] = text
             if "version" not in merged:
@@ -541,7 +614,8 @@ class QdrantVectorStore:
             current_user_id = get_user_id() if self._is_tenant else None
             if self._is_tenant and current_user_id and "user_id" not in merged:
                 merged[self._tenant_keyword_field] = current_user_id
-            point = PointStruct(id=memory_id, vector=vec, payload=merged)
+            merged = _sanitize_payload_for_qdrant(merged)
+            point = PointStruct(id=memory_id, vector=vec_data, payload=merged)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             return True
         except Exception as e:
@@ -549,15 +623,35 @@ class QdrantVectorStore:
             return False
 
     def delete(self, memory_id: str) -> bool:
-        if self._is_tenant and self.get(memory_id) is None:
-            return False
+        """Soft delete: set deleted=True and update Neo4j."""
         try:
-            self.client.delete(
+            existing = self.get(memory_id)
+            if not existing:
+                # Check if it's already soft-deleted (get returns None for deleted=True)
+                # We need to bypass get() to see if it exists at all
+                raw = self.client.retrieve(collection_name=self.collection_name, ids=[memory_id])
+                if not raw:
+                    return False
+                existing = {"id": str(raw[0].id), **raw[0].payload}
+                if existing.get("deleted") is True:
+                    return True # already deleted
+
+            updated = existing.copy()
+            memory_id = updated.pop("id")
+            updated["deleted"] = True
+            updated["updated_at"] = _utc_iso_now()
+            updated["version"] = updated.get("version", 1) + 1
+            
+            # Use set_payload instead of upsert to avoid re-sending vectors and potential "Not existing vector name" errors.
+            self.client.set_payload(
                 collection_name=self.collection_name,
-                points_selector=[memory_id],
+                payload=_sanitize_payload_for_qdrant(updated),
+                points=[memory_id],
+                wait=True
             )
-            log_step(f"🗑️ Deleted memory: {memory_id[:8]}...", symbol="❌")
-            # Keep knowledge graph in sync: remove Memory node and its relationships
+            
+            log_step(f"🗑️ Soft deleted memory: {memory_id[:8]}...", symbol="❌")
+            # Keep knowledge graph in sync
             try:
                 from memory.knowledge_graph import get_knowledge_graph
                 kg = get_knowledge_graph()
@@ -567,19 +661,33 @@ class QdrantVectorStore:
                 log_error(f"Knowledge graph delete_memory failed: {e}")
             return True
         except Exception as e:
-            log_error(f"Failed to delete memory {memory_id}: {e}")
+            log_error(f"Failed to soft delete memory {memory_id}: {e}")
+            return False
+
+    def hard_delete(self, memory_id: str) -> bool:
+        """Actually remove point from Qdrant."""
+        try:
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=[memory_id],
+            )
+            return True
+        except Exception as e:
+            log_error(f"Hard delete failed for {memory_id}: {e}")
             return False
 
     def get_all(
         self,
         limit: Optional[int] = None,
         filter_metadata: Optional[Dict[str, Any]] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         try:
             merged_filter = self._tenant_filter(filter_metadata)
             search_filter = None
             if merged_filter:
                 must_conditions: List[Any] = []
+                must_not_conditions: List[Any] = []
                 for key, value in merged_filter.items():
                     # Global space: include points with space_id=="__global__" OR missing/empty space_id (legacy).
                     if key == "space_id" and value == SPACE_ID_GLOBAL:
@@ -593,8 +701,14 @@ class QdrantVectorStore:
                         )
                     else:
                         must_conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
-                if must_conditions:
-                    search_filter = Filter(must=must_conditions)
+                
+                if not include_deleted:
+                    must_not_conditions.append(FieldCondition(key="deleted", match=MatchValue(value=True)))
+                
+                if must_conditions or must_not_conditions:
+                    search_filter = Filter(must=must_conditions, must_not=must_not_conditions)
+            elif not include_deleted:
+                search_filter = Filter(must_not=[FieldCondition(key="deleted", match=MatchValue(value=True))])
             results = []
             offset = None
             while True:
@@ -653,6 +767,7 @@ class QdrantVectorStore:
             src = updated.get("source", "")
             if source not in src:
                 updated["source"] = f"{src}, {source}"
+            updated = _sanitize_payload_for_qdrant(updated)
             vec = self._get_vector_for_point(memory_id)
             if vec:
                 point = PointStruct(id=memory_id, vector=vec, payload=updated)

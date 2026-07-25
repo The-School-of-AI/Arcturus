@@ -136,10 +136,10 @@ export const PermissionDialog: React.FC<PermissionDialogProps> = ({
 
     const containerClasses = variant === 'modal'
         ? "fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-        : "absolute bottom-6 right-6 z-[50] w-[400px] animate-in slide-in-from-right duration-200 shadow-2xl"; // Floating panel
+        : "absolute bottom-6 right-6 z-[50] w-[400px] animate-in slide-in-from-right duration-200 shadow-sm"; // Floating panel
 
     const cardClasses = cn(
-        "w-full bg-card border border-border rounded-xl shadow-2xl overflow-hidden",
+        "w-full bg-card border border-border rounded-xl shadow-sm overflow-hidden",
         variant === 'modal' ? "max-w-md animate-in zoom-in-95 duration-200" : ""
     );
 

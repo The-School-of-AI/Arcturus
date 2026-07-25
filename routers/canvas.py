@@ -17,7 +17,7 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
     # Push initial state if it exists
     state = runtime.get_surface_state(surface_id)
     if state:
-        from canvas.schema import UpdateComponentsMessage, UpdateDataModelMessage
+        from canvas.schema import UpdateComponentsMessage, UpdateDataModelMessage, UpdateHtmlMessage
         # Send components
         if state.get("components"):
             msg = UpdateComponentsMessage(surfaceId=surface_id, components=state["components"])
@@ -25,6 +25,10 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         # Send data
         if state.get("data"):
             msg = UpdateDataModelMessage(surfaceId=surface_id, data=state["data"])
+            await websocket.send_json(msg.model_dump())
+        # Send html
+        if state.get("html"):
+            msg = UpdateHtmlMessage(surfaceId=surface_id, html=state["html"], title=state.get("html_title"))
             await websocket.send_json(msg.model_dump())
     
     try:
@@ -39,12 +43,20 @@ async def canvas_websocket(websocket: WebSocket, surface_id: str):
         ws_handler.disconnect(websocket, surface_id)
 
 @router.get("/surfaces")
-async def list_canvas_surfaces():
-    """
-    List all available canvas surfaces.
-    """
+async def list_surfaces():
+    """List all canvas surfaces with metadata."""
     runtime = get_canvas_runtime()
-    return runtime.get_surfaces_list()
+    surfaces = []
+    for sid, state in runtime.surfaces.items():
+        comps = state.get("components", [])
+        surfaces.append({
+            "id": sid,
+            "title": state.get("html_title") or sid.replace("-", " ").title(),
+            "mode": "sandbox" if state.get("html") else "widgets",
+            "component_count": len(comps),
+            "has_data": bool(state.get("data")),
+        })
+    return {"surfaces": surfaces}
 
 @router.get("/state/{surface_id}")
 async def get_canvas_state(surface_id: str):
@@ -89,4 +101,8 @@ async def test_update_canvas(surface_id: str, payload: dict):
         )
     if "data" in payload:
         await runtime.update_data(surface_id, payload["data"])
+    if "html" in payload:
+        await runtime.push_html(surface_id, payload["html"], payload.get("title"))
     return {"status": "ok"}
+
+

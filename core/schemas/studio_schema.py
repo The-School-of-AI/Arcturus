@@ -86,6 +86,7 @@ class Slide(BaseModel):
     elements: List[SlideElement] = Field(default_factory=list)
     speaker_notes: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+    html: Optional[str] = None  # LLM-generated HTML for direct preview rendering
 
 
 class SlidesContentTree(BaseModel):
@@ -246,8 +247,10 @@ class Artifact(BaseModel):
     schema_version: str = "1.0"
     model: Optional[str] = None
     creation_prompt: Optional[str] = None
+    slide_mode: Optional[str] = None  # "artistic" (default) or "business"
     content_tree: Optional[Dict[str, Any]] = None
     theme_id: Optional[str] = None
+    custom_theme: Optional[Dict[str, Any]] = None
     revision_head_id: Optional[str] = None
     outline: Optional[Outline] = None
     exports: List[ExportJobSummary] = Field(default_factory=list)

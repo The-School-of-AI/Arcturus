@@ -1,21 +1,22 @@
 import React from 'react';
 import {
-    Plus, Clock, Search, Trash2, Database, Box, PlayCircle, Brain,
+    Plus, Clock, Search, Trash2, Database, PlayCircle, Brain,
     LayoutGrid, Newspaper, GraduationCap, Settings, Code2, Loader2, Notebook,
-    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network
+    CalendarClock, Terminal, Zap, Wand2, Shield, FolderOpen, Mic, Network,
+    MessageSquare, PanelLeftClose, PanelLeft
 } from 'lucide-react';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Kbd } from "@/components/ui/kbd";
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { API_BASE } from '@/lib/api';
 import axios from 'axios';
 import { RagPanel } from '@/components/sidebar/RagPanel';
-import { McpPanel } from '@/components/sidebar/McpPanel';
 import { RemmePanel } from '@/components/sidebar/RemmePanel';
 import { NotesPanel } from '@/components/sidebar/NotesPanel';
 import { ExplorerPanel } from '@/components/sidebar/ExplorerPanel';
@@ -27,13 +28,70 @@ import { GraphPanel } from '@/components/sidebar/GraphPanel';
 import { StudioSidebar } from '@/features/studio/StudioSidebar';
 import { SwarmSidebar } from '@/features/swarm/SwarmSidebar';
 import { CanvasPanel } from '@/components/sidebar/CanvasPanel';
+import { SchedulerPanel } from '@/components/sidebar/SchedulerPanel';
 
-const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
-    icon: any,
-    label: string,
-    tab?: 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm',
-    active: boolean,
-    onClick: () => void
+// ── Navigation Structure ─────────────────────────────────────────────────────
+// Grouped into logical categories for progressive disclosure
+
+type SidebarTabId = 'runs' | 'rag' | 'notes' | 'mcp' | 'remme' | 'explorer' | 'graph' | 'apps' | 'news' | 'learn' | 'settings' | 'ide' | 'scheduler' | 'console' | 'skills' | 'canvas' | 'studio' | 'admin' | 'echo' | 'swarm';
+
+interface NavItem {
+    id: SidebarTabId;
+    label: string;
+    icon: any;
+    tooltip: string;
+    shortcut?: string;
+}
+
+interface NavGroup {
+    label: string;
+    items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+    {
+        label: 'Core',
+        items: [
+            { id: 'echo', label: 'Echo', icon: Mic, tooltip: 'Voice assistant & agent interaction', shortcut: '1' },
+            { id: 'runs', label: 'Runs', icon: PlayCircle, tooltip: 'Agent task executions & history', shortcut: '2' },
+            { id: 'rag', label: 'RAG', icon: Database, tooltip: 'Knowledge base & document management', shortcut: '3' },
+            { id: 'notes', label: 'Notes', icon: Notebook, tooltip: 'Markdown notes with AI analysis', shortcut: '4' },
+            { id: 'remme', label: 'Memory', icon: Brain, tooltip: 'Persistent memory vault', shortcut: '5' },
+            { id: 'graph', label: 'Graph', icon: Network, tooltip: 'Knowledge graph explorer' },
+        ],
+    },
+    {
+        label: 'Build',
+        items: [
+            { id: 'apps', label: 'Apps', icon: LayoutGrid, tooltip: 'Dashboard builder with 60+ widgets', shortcut: '6' },
+            { id: 'canvas', label: 'Canvas', icon: LayoutGrid, tooltip: 'Interactive widget surface', shortcut: '7' },
+            { id: 'ide', label: 'IDE', icon: Code2, tooltip: 'Code editor with terminal & git', shortcut: '8' },
+            { id: 'studio', label: 'Forge', icon: Wand2, tooltip: 'Document & presentation studio' },
+        ],
+    },
+    {
+        label: 'Tools',
+        items: [
+            { id: 'scheduler', label: 'Scheduler', icon: CalendarClock, tooltip: 'Automated recurring tasks' },
+            { id: 'skills', label: 'Skills', icon: Zap, tooltip: 'Agent plugin store' },
+            { id: 'console', label: 'Console', icon: Terminal, tooltip: 'System event log' },
+            { id: 'news', label: 'News', icon: Newspaper, tooltip: 'RSS feeds & web browser' },
+        ],
+    },
+];
+
+const BOTTOM_ITEMS: NavItem[] = [
+    { id: 'admin', label: 'Admin', icon: Shield, tooltip: 'System monitoring & diagnostics' },
+    { id: 'settings', label: 'Settings', icon: Settings, tooltip: 'Configuration & integrations' },
+];
+
+// ── NavIcon Component ────────────────────────────────────────────────────────
+
+const NavIcon = ({ item, active, expanded, onClick }: {
+    item: NavItem;
+    active: boolean;
+    expanded: boolean;
+    onClick: () => void;
 }) => {
     const clearSelection = useAppStore(state => state.clearSelection);
     const sidebarTab = useAppStore(state => state.sidebarTab);
@@ -41,62 +99,126 @@ const NavIcon = ({ icon: Icon, label, tab, active, onClick }: {
     const selectedAppCardId = useAppStore(state => state.selectedAppCardId);
     const selectedExplorerNodeId = useAppStore(state => state.selectedExplorerNodeId);
     const ragActiveDocumentId = useAppStore(state => state.ragActiveDocumentId);
-    const selectedMcpServer = useAppStore(state => state.selectedMcpServer);
     const selectedRagFile = useAppStore(state => state.selectedRagFile);
     const showNewsChatPanel = useAppStore(state => state.showNewsChatPanel);
     const currentRun = useAppStore(state => state.currentRun);
     const selectedCanvasWidgetId = useAppStore(state => state.selectedCanvasWidgetId);
-
+    const setSidebarSubPanelOpen = useAppStore(state => state.setSidebarSubPanelOpen);
+    const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
 
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
         if (sidebarTab === 'rag' && (ragActiveDocumentId || selectedRagFile)) return true;
-        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedMcpServer, selectedRagFile, showNewsChatPanel, currentRun, selectedCanvasWidgetId]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, ragActiveDocumentId, selectedRagFile, showNewsChatPanel, currentRun, selectedCanvasWidgetId]);
 
-
-    const toggleSidebarSubPanel = useAppStore(state => state.toggleSidebarSubPanel);
-
-    const handleIconClick = () => {
+    const handleClick = () => {
         if (active && isInspectorOpen) {
-            // MCP should be persistent as per user request
-            if (sidebarTab === 'mcp') return;
-
             clearSelection();
         } else if (active) {
-            toggleSidebarSubPanel();
+            if (setSidebarSubPanelOpen) {
+                setSidebarSubPanelOpen(true);
+            } else {
+                toggleSidebarSubPanel();
+            }
         } else {
             onClick();
         }
     };
 
-    return (
+    const Icon = item.icon;
+
+    const btn = (
         <button
-            onClick={handleIconClick}
+            onClick={handleClick}
             className={cn(
-                "w-12 h-12 flex flex-col items-center justify-center gap-0.5 transition-all rounded-xl group relative mx-auto",
+                "relative flex items-center gap-3 w-full rounded-lg transition-all duration-150 group",
+                expanded ? "px-3 py-2" : "justify-center p-2 mx-auto w-10 h-10",
                 active
-                    ? "text-primary glass border-primary/20 shadow-lg z-10"
-                    : "text-muted-foreground hover:text-foreground opacity-60 hover:opacity-100 hover:bg-white/5"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
             )}
-            title={label}
         >
-            <Icon className={cn("w-5 h-5 transition-colors", active ? "text-primary" : "group-hover:text-foreground")} />
-            <span className={cn(
-                "text-[7px] font-black uppercase tracking-tighter transition-all duration-200",
-                active ? "text-primary opacity-100" : "text-muted-foreground/90 group-hover:text-foreground"
-            )}>
-                {label}
-            </span>
+            {/* Active indicator — left accent bar */}
+            {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-primary rounded-r-full" />
+            )}
+
+            <Icon className={cn(
+                "w-4 h-4 shrink-0 transition-colors",
+                active ? "text-primary" : "group-hover:text-foreground"
+            )} />
+
+            {expanded && (
+                <>
+                    <span className={cn(
+                        "text-sm font-medium truncate transition-colors",
+                        active ? "text-primary" : "text-foreground/80 group-hover:text-foreground"
+                    )}>
+                        {item.label}
+                    </span>
+                    {item.shortcut && (
+                        <Kbd className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                            {item.shortcut}
+                        </Kbd>
+                    )}
+                </>
+            )}
         </button>
     );
+
+    if (expanded) return btn;
+
+    return (
+        <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>{btn}</TooltipTrigger>
+            <TooltipContent side="right" className="flex items-center gap-2">
+                <span>{item.label}</span>
+                {item.shortcut && <Kbd>{item.shortcut}</Kbd>}
+            </TooltipContent>
+        </Tooltip>
+    );
 };
+
+// ── NavGroup Component ───────────────────────────────────────────────────────
+
+const NavGroupSection = ({ group, expanded, sidebarTab, setSidebarTab }: {
+    group: NavGroup;
+    expanded: boolean;
+    sidebarTab: string;
+    setSidebarTab: (tab: any) => void;
+}) => {
+    return (
+        <div className="space-y-0.5">
+            {expanded && (
+                <div className="px-3 py-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                        {group.label}
+                    </span>
+                </div>
+            )}
+            {!expanded && (
+                <div className="w-6 h-px bg-border/50 mx-auto my-1.5" />
+            )}
+            {group.items.map((item) => (
+                <NavIcon
+                    key={item.id}
+                    item={item}
+                    active={sidebarTab === item.id}
+                    expanded={expanded}
+                    onClick={() => setSidebarTab(item.id)}
+                />
+            ))}
+        </div>
+    );
+};
+
+// ── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) => {
     const runs = useAppStore(state => state.runs);
@@ -106,12 +228,9 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const createNewRun = useAppStore(state => state.createNewRun);
     const sidebarTab = useAppStore(state => state.sidebarTab);
     const setSidebarTab = useAppStore(state => state.setSidebarTab);
-    const deleteRun = useAppStore(state => state.deleteRun);
-    const generateAppFromReport = useAppStore(state => state.generateAppFromReport);
-    const isGeneratingApp = useAppStore(state => state.isGeneratingApp);
-    const { flags } = useFeatureFlags();
+    const isSidebarExpanded = useAppStore(state => state.isSidebarExpanded);
+    const toggleSidebarExpanded = useAppStore(state => state.toggleSidebarExpanded);
 
-    // Fetch runs on mount
     React.useEffect(() => {
         fetchRuns();
     }, [fetchRuns]);
@@ -122,7 +241,6 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
             setSidebarTab('runs');
         }
     }, [sidebarTab, setSidebarTab]);
-
     const isNewRunOpen = useAppStore(state => state.isNewRunOpen);
     const setIsNewRunOpen = useAppStore(state => state.setIsNewRunOpen);
     const spaces = useAppStore(state => state.spaces);
@@ -132,8 +250,8 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
     const [searchQuery, setSearchQuery] = React.useState("");
     const [isOptimizing, setIsOptimizing] = React.useState(false);
     const [runSpaceId, setRunSpaceId] = React.useState<string | null>(null);
+    const [runSourceFilter, setRunSourceFilter] = React.useState<'all' | 'manual' | 'scheduled'>('manual');
 
-    // Sync run space from current space when dialog opens
     React.useEffect(() => {
         if (isNewRunOpen) {
             setRunSpaceId(currentSpaceId);
@@ -141,14 +259,17 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         }
     }, [isNewRunOpen, currentSpaceId, fetchSpaces]);
 
-    // Filter runs by search and by space (Phase 4). Global = only unscoped runs; space = only runs in that space.
     const filteredRuns = React.useMemo(() => {
         let list = runs;
         if (currentSpaceId) {
             list = list.filter((r) => r.space_id === currentSpaceId);
         } else {
-            // Global: show only runs with no space (unscoped)
             list = list.filter((r) => !r.space_id || r.space_id === '__global__');
+        }
+        if (runSourceFilter === 'manual') {
+            list = list.filter((r) => !r.id.startsWith('auto_'));
+        } else if (runSourceFilter === 'scheduled') {
+            list = list.filter((r) => r.id.startsWith('auto_'));
         }
         if (searchQuery.trim()) {
             list = list.filter((run) =>
@@ -157,7 +278,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
             );
         }
         return list;
-    }, [runs, searchQuery, currentSpaceId]);
+    }, [runs, searchQuery, currentSpaceId, runSourceFilter]);
 
     const currentSpaceName = currentSpaceId
         ? spaces.find((s) => s.space_id === currentSpaceId)?.name || 'Space'
@@ -170,57 +291,104 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
         setNewQuery("");
     };
 
+    // Keyboard shortcuts for tab switching
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only trigger with Ctrl/Cmd + number
+            if (!(e.metaKey || e.ctrlKey)) return;
+            const allItems = NAV_GROUPS.flatMap(g => g.items);
+            const shortcutItem = allItems.find(i => i.shortcut === e.key);
+            if (shortcutItem) {
+                e.preventDefault();
+                setSidebarTab(shortcutItem.id);
+            }
+            // Cmd+\ to toggle sidebar
+            if (e.key === '\\') {
+                e.preventDefault();
+                toggleSidebarExpanded();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [setSidebarTab, toggleSidebarExpanded]);
+
+    const expanded = isSidebarExpanded;
+
     return (
         <div className="h-full flex overflow-hidden">
-            {/* NavRail - Left Vertical Bar */}
-            <div className="w-16 border-r border-white/10 bg-background/10 backdrop-blur-md flex flex-col items-center py-4 gap-2 shrink-0 z-20">
-                {/* Top Tools — scrollable so Echo + Settings always stay pinned at bottom */}
-                <div className="flex-1 w-full px-2 space-y-2 overflow-y-auto min-h-0 no-scrollbar">
-                    <NavIcon icon={PlayCircle} label="Runs" tab="runs" active={sidebarTab === 'runs'} onClick={() => setSidebarTab('runs')} />
-                    <NavIcon icon={Database} label="RAG" tab="rag" active={sidebarTab === 'rag'} onClick={() => setSidebarTab('rag')} />
-                    <NavIcon icon={Notebook} label="Notes" tab="notes" active={sidebarTab === 'notes'} onClick={() => setSidebarTab('notes')} />
-                    <NavIcon icon={Box} label="MCP" tab="mcp" active={sidebarTab === 'mcp'} onClick={() => setSidebarTab('mcp')} />
-                    <NavIcon icon={Brain} label="RemMe" tab="remme" active={sidebarTab === 'remme'} onClick={() => setSidebarTab('remme')} />
-                    <NavIcon icon={Network} label="Graph" tab="graph" active={sidebarTab === 'graph'} onClick={() => setSidebarTab('graph')} />
-                    <NavIcon icon={Code2} label="Explorer" tab="explorer" active={sidebarTab === 'explorer'} onClick={() => setSidebarTab('explorer')} />
-                    <NavIcon icon={LayoutGrid} label="Canvas" tab="canvas" active={sidebarTab === 'canvas'} onClick={() => setSidebarTab('canvas')} />
-                    {flags.multi_agent !== false && (
-                        <NavIcon icon={Network} label="Swarm" tab="swarm" active={sidebarTab === 'swarm'} onClick={() => setSidebarTab('swarm')} />
-                    )}
-
-                    <div className="w-8 h-px bg-muted/50 my-2 mx-auto" />
-
-                    <NavIcon icon={LayoutGrid} label="Apps" tab="apps" active={sidebarTab === 'apps'} onClick={() => setSidebarTab('apps')} />
-                    <NavIcon icon={Code2} label="IDE" tab="ide" active={sidebarTab === 'ide'} onClick={() => setSidebarTab('ide')} />
-                    <NavIcon icon={CalendarClock} label="Scheduler" tab="scheduler" active={sidebarTab === 'scheduler'} onClick={() => setSidebarTab('scheduler')} />
-                    <NavIcon icon={Zap} label="Skills" tab="skills" active={sidebarTab === 'skills'} onClick={() => setSidebarTab('skills')} />
-                    <NavIcon icon={Wand2} label="Forge" tab="studio" active={sidebarTab === 'studio'} onClick={() => setSidebarTab('studio')} />
-                    <NavIcon icon={Terminal} label="Console" tab="console" active={sidebarTab === 'console'} onClick={() => setSidebarTab('console')} />
-                    <NavIcon icon={Newspaper} label="News" tab="news" active={sidebarTab === 'news'} onClick={() => setSidebarTab('news')} />
-                    <NavIcon icon={GraduationCap} label="Learn" tab="learn" active={sidebarTab === 'learn'} onClick={() => setSidebarTab('learn')} />
-                    <NavIcon icon={Shield} label="Admin" tab="admin" active={sidebarTab === 'admin'} onClick={() => setSidebarTab('admin')} />
+            {/* NavRail / Expanded Sidebar */}
+            <div className={cn(
+                "bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 z-20 transition-all duration-300 ease-out",
+                expanded ? "w-[200px]" : "w-[52px]"
+            )}>
+                {/* Toggle button */}
+                <div className={cn(
+                    "flex items-center shrink-0 border-b border-sidebar-border",
+                    expanded ? "justify-end px-2 h-10" : "justify-center h-10"
+                )}>
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <button
+                                onClick={toggleSidebarExpanded}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            >
+                                {expanded ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                            <span className="flex items-center gap-2">
+                                {expanded ? 'Collapse' : 'Expand'} sidebar
+                                <Kbd>&#8984;\</Kbd>
+                            </span>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
 
-                {/* Bottom Tools */}
-                <div className="w-full px-2 space-y-2">
-                    <NavIcon icon={Mic} label="Echo" tab="echo" active={sidebarTab === 'echo'} onClick={() => setSidebarTab('echo')} />
-                    <NavIcon icon={Settings} label="Settings" tab="settings" active={sidebarTab === 'settings'} onClick={() => setSidebarTab('settings')} />
+                {/* Nav Groups — scrollable */}
+                <div className={cn(
+                    "flex-1 overflow-y-auto overflow-x-hidden no-scrollbar",
+                    expanded ? "px-2 py-3 space-y-4" : "py-3 px-1 space-y-1"
+                )}>
+                    {NAV_GROUPS.map((group) => (
+                        <NavGroupSection
+                            key={group.label}
+                            group={group}
+                            expanded={expanded}
+                            sidebarTab={sidebarTab}
+                            setSidebarTab={setSidebarTab}
+                        />
+                    ))}
+                </div>
+
+                {/* Bottom section — Settings & Admin */}
+                <div className={cn(
+                    "shrink-0 border-t border-sidebar-border",
+                    expanded ? "px-2 py-2 space-y-0.5" : "py-2 px-1 space-y-1"
+                )}>
+                    {BOTTOM_ITEMS.map((item) => (
+                        <NavIcon
+                            key={item.id}
+                            item={item}
+                            active={sidebarTab === item.id}
+                            expanded={expanded}
+                            onClick={() => setSidebarTab(item.id)}
+                        />
+                    ))}
                 </div>
             </div>
 
-            {/* Content Area */}
+            {/* Content Area — Sub Panel */}
             {!hideSubPanel && (
-                <div className="flex-1 min-w-0 bg-transparent border-l border-white/10 shadow-none flex flex-col overflow-hidden relative">
+                <div className="flex-1 min-w-0 bg-sidebar border-l border-sidebar-border flex flex-col overflow-hidden relative animate-panel-in-left">
                     {sidebarTab === 'settings' && <SettingsPanel />}
                     {sidebarTab === 'runs' && (
                         <div className="flex flex-col h-full bg-transparent text-foreground">
-
-                            <div className="p-2 border-b border-border/50 bg-muted/20 space-y-2 shrink-0">
+                            <div className="p-2 border-b border-border/50 bg-surface-1 space-y-2 shrink-0">
                                 <div className="flex items-center gap-1.5">
                                     <div className="relative flex-1 group">
                                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
                                         <Input
-                                            className="w-full bg-background/50 border-transparent focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
+                                            className="w-full bg-secondary border-border focus:bg-background focus:border-border rounded-md text-xs pl-8 pr-2 h-8 transition-all placeholder:text-muted-foreground"
                                             placeholder="Search runs..."
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -264,7 +432,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                             placeholder="e.g., Research latest AI trends..."
                                                             value={newQuery}
                                                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewQuery(e.target.value)}
-                                                            className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24" // Extra padding for button
+                                                            className="bg-muted border-input text-foreground placeholder:text-muted-foreground pr-24"
                                                             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleStartRun()}
                                                             autoFocus
                                                             disabled={isOptimizing}
@@ -276,7 +444,7 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                             variant="ghost"
                                                             size="sm"
                                                             disabled={isOptimizing || !newQuery.trim()}
-                                                            className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                                            className="h-6 text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 gap-1 disabled:opacity-50"
                                                             onClick={async () => {
                                                                 if (!newQuery) return;
                                                                 setIsOptimizing(true);
@@ -300,25 +468,43 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             </div>
                                             <DialogFooter>
                                                 <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted">Cancel</Button>
-                                                <Button onClick={handleStartRun} className="bg-neon-yellow text-white hover:bg-neon-yellow/90 font-semibold">Start Run</Button>
+                                                <Button onClick={handleStartRun} className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold">Start Run</Button>
                                             </DialogFooter>
                                         </DialogContent>
                                     </Dialog>
                                 </div>
-                                <button
-                                    onClick={() => useAppStore.getState().setIsSpacesModalOpen(true)}
-                                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                    title="Manage Spaces"
-                                >
-                                    <FolderOpen className="w-3 h-3" />
-                                    Space: {currentSpaceName}
-                                </button>
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        onClick={() => useAppStore.getState().setIsSpacesModalOpen(true)}
+                                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                        title="Manage Spaces"
+                                    >
+                                        <FolderOpen className="w-3 h-3" />
+                                        Space: {currentSpaceName}
+                                    </button>
+                                    <div className="flex items-center gap-0.5 bg-surface-2 rounded-md p-0.5">
+                                        {(['all', 'manual', 'scheduled'] as const).map((f) => (
+                                            <button
+                                                key={f}
+                                                onClick={() => setRunSourceFilter(f)}
+                                                className={cn(
+                                                    "px-1.5 py-0.5 rounded text-2xs font-medium transition-colors capitalize",
+                                                    runSourceFilter === f
+                                                        ? "bg-background text-foreground shadow-xs"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                {f}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* List - Matches Remme Style */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                            {/* Run List */}
+                            <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
                                 {filteredRuns.map((run) => {
-                                    const isStale = run.status === 'running' && (Date.now() - run.createdAt > 60 * 60 * 1000); // 1 hour timeout
+                                    const isStale = run.status === 'running' && (Date.now() - run.createdAt > 60 * 60 * 1000);
                                     const displayStatus = isStale ? 'failed' : run.status;
                                     const isActive = currentRun?.id === run.id;
 
@@ -327,27 +513,31 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                             key={run.id}
                                             onClick={() => setCurrentRun(run.id)}
                                             className={cn(
-                                                "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
-                                                "hover:shadow-md",
+                                                "group relative p-3 rounded-xl border transition-all duration-200 cursor-pointer stagger-item",
                                                 isActive
-                                                    ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
-                                                    : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
+                                                    ? "border-primary/30 bg-primary/5 shadow-xs"
+                                                    : "border-border/50 hover:border-border hover:bg-accent/50"
                                             )}
                                         >
                                             <div className="flex justify-between items-start gap-3">
                                                 <div className="flex-1 min-w-0">
                                                     <p className={cn(
-                                                        "text-[13px] leading-relaxed font-medium transition-all duration-300",
+                                                        "text-[13px] leading-relaxed font-medium transition-colors",
                                                         isActive
-                                                            ? "text-neon-yellow selection:bg-neon-yellow/30"
+                                                            ? "text-primary"
                                                             : displayStatus === 'failed'
-                                                                ? "text-red-500 group-hover:text-red-400"
-                                                                : "text-foreground group-hover:text-foreground/80"
+                                                                ? "text-red-500"
+                                                                : "text-foreground"
                                                     )}>
+                                                        {run.source && run.source !== 'web' && (
+                                                            <span className="inline-flex items-center gap-1 mr-1.5 px-1.5 py-0.5 rounded text-xs font-semibold uppercase bg-primary/10 text-primary border border-primary/20">
+                                                                <MessageSquare className="w-2.5 h-2.5" />
+                                                                {run.source}
+                                                            </span>
+                                                        )}
                                                         {run.name}
                                                     </p>
                                                 </div>
-                                                {/* Build App Button - Top Right */}
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -357,10 +547,10 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                     }}
                                                     disabled={useAppStore.getState().isGeneratingApp}
                                                     className={cn(
-                                                        "opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-200",
+                                                        "opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-150",
                                                         useAppStore.getState().isGeneratingApp
                                                             ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                                            : "hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                                            : "hover:bg-primary/10 text-muted-foreground hover:text-primary"
                                                     )}
                                                     title="Build App from this Run"
                                                 >
@@ -372,24 +562,20 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                 </button>
                                             </div>
 
-                                            {/* Footer - Only visible when Active */}
                                             {isActive && (
-                                                <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="mt-3 pt-2.5 border-t border-border/40 flex items-center justify-between animate-content-in">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+                                                        <span className="flex items-center gap-1 text-2xs text-muted-foreground font-mono">
                                                             <Clock className="w-3 h-3" />
                                                             {new Date(run.createdAt).toLocaleDateString()}
                                                         </span>
-
                                                         {run.total_tokens !== undefined && (
-                                                            <span className="text-[9px] text-muted-foreground font-mono opacity-70">
-                                                                • {run.total_tokens.toLocaleString()} tks
+                                                            <span className="text-2xs text-muted-foreground font-mono opacity-70">
+                                                                {run.total_tokens.toLocaleString()} tks
                                                             </span>
                                                         )}
-
-                                                        {/* Delete Button - Moved to Footer */}
                                                         <button
-                                                            className="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-400 transition-all duration-200"
+                                                            className="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-400 transition-all"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 if (confirm('Delete this run?')) useAppStore.getState().deleteRun(run.id);
@@ -398,13 +584,12 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                                                         >
                                                             <Trash2 className="w-3 h-3" />
                                                         </button>
-
                                                     </div>
                                                     <span className={cn(
-                                                        "px-2 py-0.5 rounded-full text-[9px] uppercase font-bold tracking-tighter",
-                                                        displayStatus === 'completed' && "bg-green-500/10 text-green-400/80",
+                                                        "px-2 py-0.5 rounded-full text-2xs uppercase font-bold tracking-tight",
+                                                        displayStatus === 'completed' && "bg-success-muted text-success",
                                                         displayStatus === 'failed' && "bg-red-500/10 text-red-400/80",
-                                                        displayStatus === 'running' && "bg-orange-500/10 text-orange-400 animate-pulse",
+                                                        displayStatus === 'running' && "bg-warning-muted text-warning animate-pulse",
                                                     )}>
                                                         {displayStatus}
                                                     </span>
@@ -418,7 +603,6 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     )}
                     {sidebarTab === 'rag' && <RagPanel />}
                     {sidebarTab === 'notes' && <NotesPanel />}
-                    {sidebarTab === 'mcp' && <McpPanel />}
                     {sidebarTab === 'remme' && <RemmePanel />}
                     {sidebarTab === 'graph' && <GraphPanel />}
                     {sidebarTab === 'explorer' && <ExplorerPanel />}
@@ -426,23 +610,22 @@ export const Sidebar: React.FC<{ hideSubPanel?: boolean }> = ({ hideSubPanel }) 
                     {sidebarTab === 'studio' && <StudioSidebar />}
                     {sidebarTab === 'swarm' && <SwarmSidebar />}
                     {sidebarTab === 'canvas' && <CanvasPanel />}
-                    {/* Persist AppsSidebar to prevent reloading app components */}
+                    {sidebarTab === 'scheduler' && <SchedulerPanel />}
                     <div style={{ display: sidebarTab === 'apps' ? 'block' : 'none', height: '100%' }}>
                         <AppsSidebar />
                     </div>
-
-                    {/* Persist NewsPanel to prevent reloading feed */}
+                    {/* Persist NewsPanel */}
                     <div style={{ display: sidebarTab === 'news' ? 'block' : 'none', height: '100%' }}>
                         <NewsPanel />
                     </div>
                     {sidebarTab === 'learn' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 opacity-50">
-                            <div className="p-6 bg-muted/50 rounded-full ring-1 ring-white/10">
+                            <div className="p-6 bg-surface-2 rounded-full ring-1 ring-border">
                                 <GraduationCap className="w-12 h-12" />
                             </div>
                             <div className="space-y-1">
-                                <h2 className="text-xl font-bold text-foreground uppercase tracking-tighter">Under Construction</h2>
-                                <p className="text-xs text-muted-foreground">This feature is currently in development and will be available in a future update.</p>
+                                <h2 className="text-xl font-bold text-foreground uppercase tracking-tight">Under Construction</h2>
+                                <p className="text-xs text-muted-foreground">This feature is currently in development.</p>
                             </div>
                         </div>
                     )}

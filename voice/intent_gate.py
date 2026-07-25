@@ -287,6 +287,14 @@ def classify(text: str) -> GateDecision:
     best_intent = max(scores, key=scores.__getitem__)
     best_score  = scores[best_intent]
 
+    # ── Low-confidence fallback: default to AGENTIC (safe Nexus dispatch) ────
+    # When all scores are very low (< 0.20), the text is likely garbled or
+    # ambiguous.  AGENTIC (Nexus query) is the safest default — it handles
+    # questions, garbled text gracefully, and never starts dictation by accident.
+    if best_score < 0.20:
+        best_intent = IntentType.AGENTIC
+        best_score = 0.15
+
     # ── Safety gate: AGENTIC is never auto-selected below threshold ──────────
     if best_intent == IntentType.AGENTIC:
         reasoning = f"Agentic confirmed: score={best_score:.2f}"
@@ -370,7 +378,10 @@ class IntentRouter:
         self.model_manager = None
         if self.config.get("use_llm"):
             model_name = self.config.get("model")
-            self.model_manager = ModelManager(model_name=model_name)
+            provider = self.config.get("provider")  # "ollama" or "gemini"
+            self.model_manager = ModelManager(
+                model_name=model_name, provider=provider
+            )
 
     async def _classify_llm(self, utterance: str) -> Optional[tuple[IntentType, float, str]]:
         """
@@ -593,17 +604,17 @@ Intent: AGENTIC
                     daemon=True,
                 ).start()
             else:
-                # Not a known navigation route — let Nexus handle it as a general query
-                print("⚡ [IntentGate] Command → not navigation, falling back to Nexus.")
-                self._route_to_nexus(utterance)
+                # Not a known navigation route — use direct chat
+                print("⚡ [IntentGate] Command → not navigation, using direct chat.")
+                self._route_to_direct_chat(utterance)
 
         # IntentType.QUERY does not exist — AGENTIC handles all Q&A via Nexus
 
         elif intent == IntentType.AGENTIC:
-            # ── AGENTIC PATH: only reachable with confidence ≥ threshold ─────
-            print(f"🤖 [IntentGate] Agentic escalation approved "
+            # ── AGENTIC PATH: direct LLM chat for fast voice conversation ────
+            print(f"💬 [IntentGate] Direct chat "
                   f"(conf={decision.confidence:.2f})")
-            self._route_to_nexus(utterance)
+            self._route_to_direct_chat(utterance)
 
     def _execute_navigation(self, utterance: str) -> None:
         """
@@ -635,8 +646,16 @@ Intent: AGENTIC
         self._orch._speak(spoken, source="navigation")
         self._orch._enter_follow_up()
 
+    def _route_to_direct_chat(self, utterance: str) -> None:
+        """Fast path: direct LLM chat for voice conversations."""
+        threading.Thread(
+            target=self._orch._direct_chat_then_speak,
+            args=(utterance,),
+            daemon=True,
+        ).start()
+
     def _route_to_nexus(self, utterance: str) -> None:
-        """Dispatch to the appropriate TTS/Nexus path."""
+        """Heavy path: full Nexus pipeline for complex multi-step tasks."""
         use_streaming = self._orch._should_use_streaming()
         if use_streaming:
             threading.Thread(

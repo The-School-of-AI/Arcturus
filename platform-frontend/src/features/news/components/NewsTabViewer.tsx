@@ -49,7 +49,7 @@ export const NewsTabViewer: React.FC = () => {
 
                 <button
                     onClick={closeAllNewsTabs}
-                    className="text-[10px] text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tighter transition-colors"
+                    className="text-xs text-muted-foreground hover:text-red-400 px-2 font-bold uppercase tracking-tight transition-colors"
                 >
                     Close All
                 </button>
@@ -80,9 +80,9 @@ export const NewsTabViewer: React.FC = () => {
                     <span className="text-[11px] text-muted-foreground truncate font-mono">{activeUrl}</span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                     <ShieldCheck className="w-3.5 h-3.5 text-cyan-500/60" />
-                    <span className="uppercase tracking-widest hidden sm:block">Sandboxed</span>
+                    <span className="uppercase tracking-wide hidden sm:block">Sandboxed</span>
                     <button
                         onClick={() => window.open(activeUrl, '_blank')}
                         className="p-1.5 hover:bg-muted rounded-md transition-colors"

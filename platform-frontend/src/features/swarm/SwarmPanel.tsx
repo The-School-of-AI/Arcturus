@@ -97,7 +97,7 @@ export const SwarmPanel: React.FC = () => {
     return (
         <div className="flex flex-col h-full overflow-hidden bg-transparent">
             {/* Toolbar */}
-            <div className="shrink-0 p-3 border-b border-border bg-card/30 backdrop-blur-md space-y-2">
+            <div className="shrink-0 p-3 border-b border-border bg-card/30 space-y-2">
                 {/* Header row */}
                 <div className="flex items-center gap-2">
                     <Network className="w-4 h-4 text-primary shrink-0" />
@@ -168,7 +168,7 @@ export const SwarmPanel: React.FC = () => {
 
                 {/* Stats bar */}
                 {tasks.length > 0 && (
-                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground font-mono">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground font-mono">
                         <span className="text-green-400">{completedCount} done</span>
                         {inProgressCount > 0 && <span className="text-primary animate-pulse">{inProgressCount} running</span>}
                         {failedCount > 0 && <span className="text-red-400">{failedCount} failed</span>}

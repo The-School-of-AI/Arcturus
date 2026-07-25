@@ -1,7 +1,8 @@
 import type { SlideTheme } from './SlideFrame';
 import type { Slide } from '../normalizers';
 import { findElement, findElements, normalizeComparisonColumn, normalizeCalloutBox } from '../normalizers';
-import { KickerElement, TakeawayElement } from './elements';
+import { KickerElement, TakeawayElement, AnimatedElement } from './elements';
+import { resolveSlideColors, resolveCardStyle } from './theme-utils';
 
 interface Props {
   slide: Slide;
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export function ComparisonSlide({ slide, theme, isThumb }: Props) {
+  const sc = resolveSlideColors(slide.metadata?.slide_style, theme);
+  const cs = resolveCardStyle(slide.metadata?.slide_style?.card, theme, !!isThumb);
   const kickerEl = findElement(slide, 'kicker');
   const bodyEls = findElements(slide, 'body');
   const takeawayEl = findElement(slide, 'takeaway');
@@ -22,20 +25,25 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
 
   return (
     <div className={`flex flex-col h-full ${isThumb ? 'p-2' : 'p-[6%]'}`}>
-      {kickerEl?.content && (
-        <KickerElement content={kickerEl.content} theme={theme} isThumb={isThumb} />
-      )}
+      <AnimatedElement animation="fade" delay={0} isThumb={isThumb}>
+        {kickerEl?.content && (
+          <KickerElement content={kickerEl.content} theme={theme} isThumb={isThumb} accentColor={sc.accentColor} />
+        )}
+      </AnimatedElement>
 
       {slide.title && (
-        <div
-          className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
-          style={{
-            color: theme.colors.primary,
-            fontFamily: `"${theme.font_heading}", "Segoe UI", system-ui, sans-serif`,
-          }}
-        >
-          {slide.title}
-        </div>
+        <AnimatedElement animation="rise" delay={80} isThumb={isThumb}>
+          <div
+            className={isThumb ? 'text-[5px] font-bold mb-1' : 'text-xl font-bold mb-4'}
+            style={{
+              color: sc.titleColor,
+              fontFamily: sc.titleFont,
+              ...sc.titleStyle,
+            }}
+          >
+            {slide.title}
+          </div>
+        </AnimatedElement>
       )}
 
       <div className={`flex-1 grid grid-cols-2 ${isThumb ? 'gap-1' : 'gap-4'} min-h-0`}>
@@ -53,10 +61,10 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
             </div>
           )}
           <div
-            className={isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'}
+            className={`${isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'} ${cs.className}`}
             style={{
-              backgroundColor: theme.colors.primary + '08',
-              color: theme.colors.text,
+              ...cs.inlineStyle,
+              color: sc.bodyColor,
             }}
           >
             {left.body}
@@ -69,18 +77,18 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
             <div
               className={isThumb ? 'text-[3.5px] font-bold mb-0.5' : 'text-sm font-bold mb-2 pb-1 border-b'}
               style={{
-                color: theme.colors.accent,
-                borderColor: theme.colors.accent + '40',
+                color: sc.accentColor,
+                borderColor: sc.accentColor + '40',
               }}
             >
               {right.label}
             </div>
           )}
           <div
-            className={isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'}
+            className={`${isThumb ? 'text-[3px] p-1 rounded' : 'text-sm p-3 rounded-lg'} ${cs.className}`}
             style={{
-              backgroundColor: theme.colors.secondary + '08',
-              color: theme.colors.text,
+              ...cs.inlineStyle,
+              color: sc.bodyColor,
             }}
           >
             {right.body}
@@ -105,7 +113,7 @@ export function ComparisonSlide({ slide, theme, isThumb }: Props) {
       )}
 
       {takeawayEl?.content && (
-        <TakeawayElement content={takeawayEl.content} theme={theme} isThumb={isThumb} />
+        <TakeawayElement content={takeawayEl.content} theme={theme} isThumb={isThumb} accentColor={sc.accentColor} />
       )}
     </div>
   );

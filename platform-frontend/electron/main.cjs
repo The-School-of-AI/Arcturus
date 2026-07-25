@@ -993,8 +993,17 @@ function setupBrowserHandlers() {
     });
 
     // Set browser view bounds (called from renderer when container resizes)
+    // Renderer sends CSS pixel coords via getBoundingClientRect(), but setBounds()
+    // expects window DIP coords. When the user zooms (Ctrl+/-), CSS pixels diverge
+    // from DIPs by the webContents zoom factor — so we must scale accordingly.
     ipcMain.on('browser:set-bounds', (event, bounds) => {
-        browserViewBounds = bounds;
+        const zoomFactor = mainWindow?.webContents?.getZoomFactor() || 1;
+        browserViewBounds = {
+            x: Math.round(bounds.x * zoomFactor),
+            y: Math.round(bounds.y * zoomFactor),
+            width: Math.round(bounds.width * zoomFactor),
+            height: Math.round(bounds.height * zoomFactor)
+        };
         updateActiveBrowserViewBounds();
     });
 

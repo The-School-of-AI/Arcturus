@@ -28,6 +28,7 @@ class SkillManifest(BaseModel):
     intent_triggers: List[str] = []     # Keywords for auto-matching
     tools: List[ToolDefinition] = []    # Callable tools this skill provides
     checksum: str = ""                  # SHA-256 for tamper detection
+    signature: str = ""                 # RSA signature for author verification
 
 
 class MarketplaceSkill(ABC):

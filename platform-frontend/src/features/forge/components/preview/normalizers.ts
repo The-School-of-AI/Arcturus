@@ -22,6 +22,7 @@ export interface Slide {
   elements: SlideElement[];
   speaker_notes?: string;
   metadata?: Record<string, any>;
+  html?: string;
 }
 
 export interface TimelineItem {

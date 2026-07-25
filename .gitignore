@@ -9,6 +9,7 @@ __pycache__/
 *.pyd
 .Python
 *.bin
+*.onnx
 
 # Build Artifacts
 platform-frontend/dist/
@@ -93,6 +94,10 @@ S15A.egg-info/
 *.gz
 
 # Whitelist Static Assets for Frontend
+!docs/*.png
+!docs/*.jpg
+!docs/*.jpeg
+!docs/*.webp
 !platform-frontend/public/*.svg
 !platform-frontend/public/*.ico
 !platform-frontend/public/*.png

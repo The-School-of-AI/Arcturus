@@ -9,7 +9,8 @@ from .schema import (
     UpdateDataModelMessage, 
     DeleteSurfaceMessage,
     EvalJSMessage,
-    UIComponent
+    UIComponent,
+    UpdateHtmlMessage
 )
 
 import logging
@@ -31,7 +32,12 @@ class CanvasRuntime:
     async def create_surface(self, surface_id: str, title: str = "New Canvas", catalog: str = "default"):
         """Initialize a new canvas region."""
         msg = CreateSurfaceMessage(surfaceId=surface_id, title=title, catalogId=catalog)
-        self.surfaces[surface_id] = {"components": [], "data": {}}
+        self.surfaces[surface_id] = {
+        "components": [],
+        "data": {},
+        "html": "",
+        "html_title": None,
+        }
         await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
 
     async def push_components(self, surface_id: str, components: List[Dict[str, Any]]):
@@ -211,29 +217,26 @@ class CanvasRuntime:
         msg = UpdateDataModelMessage(surfaceId=surface_id, data=data)
         await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
 
-    def save_snapshots(self):
-        """Persist all surface states to disk."""
-        import logging
-        logger = logging.getLogger("canvas.runtime")
-        try:
-            self.storage_path.mkdir(parents=True, exist_ok=True)
-            for surface_id, state in self.surfaces.items():
-                path = self.storage_path / f"{surface_id}.json"
-                # Convert UIComponents back to dicts for JSON serialization
-                serializable_state = {
-                    "components": [c.model_dump() if hasattr(c, "model_dump") else c for c in state.get("components", [])],
-                    "data": state.get("data", {})
-                }
-                
-                try:
-                    out_json = json.dumps(serializable_state, indent=2)
-                    path.write_text(out_json, encoding="utf-8")
-                    logger.info(f"Snapshot saved for surface: {surface_id}")
-                except Exception as json_e:
-                    logger.error(f"Failed to JSON dump {surface_id}: {json_e}")
-                    
-        except Exception as e:
-            logger.error(f"Failed to save snapshots: {e}")
+    async def push_html(self, surface_id: str, html: str, title: Optional[str] = None):
+        """Set sandbox HTML for a surface and broadcast to clients."""
+        if surface_id not in self.surfaces:
+            await self.create_surface(surface_id)
+        self.surfaces[surface_id]["html"] = html
+        self.surfaces[surface_id]["html_title"] = title
+        msg = UpdateHtmlMessage(surfaceId=surface_id, html=html, title=title)
+        await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
+
+    async def eval_js(self, surface_id: str, code: str):
+        """Execute arbitrary JS in the sandboxed context."""
+        msg = EvalJSMessage(surfaceId=surface_id, code=code)
+        await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
+
+    async def delete_surface(self, surface_id: str):
+        """Remove a surface and its state."""
+        if surface_id in self.surfaces:
+            del self.surfaces[surface_id]
+            msg = DeleteSurfaceMessage(surfaceId=surface_id)
+            await self.ws_handler.broadcast_to_surface(surface_id, msg.model_dump())
 
     def get_surfaces_list(self) -> List[Dict[str, Any]]:
         """Return metadata for all available surfaces."""
@@ -246,6 +249,32 @@ class CanvasRuntime:
             })
         return results
 
+    def save_snapshots(self):
+        """Persist all surface states to disk."""
+        import logging
+        logger = logging.getLogger("canvas.runtime")
+        try:
+            self.storage_path.mkdir(parents=True, exist_ok=True)
+            for surface_id, state in self.surfaces.items():
+                path = self.storage_path / f"{surface_id}.json"
+                # Convert UIComponents back to dicts for JSON serialization
+                serializable_state = {
+                    "components": [c.model_dump() if hasattr(c, "model_dump") else c for c in state.get("components", [])],
+                    "data": state.get("data", {}),
+                    "html": state.get("html", ""),
+                    "html_title": state.get("html_title", None),
+                }
+                
+                try:
+                    out_json = json.dumps(serializable_state, indent=2)
+                    path.write_text(out_json, encoding="utf-8")
+                    logger.info(f"Snapshot saved for surface: {surface_id}")
+                except Exception as json_e:
+                    logger.error(f"Failed to JSON dump {surface_id}: {json_e}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to save snapshots: {e}")
+
     def load_snapshots(self):
         """Restore surface states from disk on startup."""
         import logging
@@ -256,6 +285,8 @@ class CanvasRuntime:
             surface_id = path.stem
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
+                data.setdefault("html", "")
+                data.setdefault("html_title", None)
                 self.surfaces[surface_id] = data
                 logger.info(f"Restored surface {surface_id} from snapshot")
             except Exception as e:

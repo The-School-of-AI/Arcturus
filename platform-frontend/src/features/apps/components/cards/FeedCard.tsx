@@ -18,8 +18,8 @@ export const FeedCard: React.FC<FeedCardProps> = ({ title, items = [
                 {items.map(item => (
                     <div key={item.id} className="group relative pl-4 border-l-2 border-border/50 hover:border-primary/50 transition-colors pb-1">
                         <div className="flex items-center justify-between mb-0.5">
-                            <div className="text-[10px] uppercase font-bold text-primary opacity-80">{item.source}</div>
-                            <div className="text-[10px] text-muted-foreground">{item.time}</div>
+                            <div className="text-xs uppercase font-bold text-primary opacity-80">{item.source}</div>
+                            <div className="text-xs text-muted-foreground">{item.time}</div>
                         </div>
                         <div className="text-xs text-foreground/90 leading-relaxed group-hover:text-foreground transition-colors">
                             {item.text}

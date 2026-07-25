@@ -60,98 +60,14 @@ remme_extractor = get_remme_extractor()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import time as _time
+    _t0 = _time.monotonic()
     print("🚀 API Starting up...")
 
-    # 1. Initialize Voice Pipeline FIRST (Zero Cold-Start)
-    from voice.orchestrator import Orchestrator
-    from voice.voice_wake_service import VoiceWakeService
-    from voice.stt_service import STTService
-    from voice.deepgram_stt_service import DeepgramSTTService
-    from voice.agent import Agent
-    from voice.tts_service import TTSService
-    from voice.config import VOICE_CONFIG
-
-    try:
-        # Create essential services
-        voice_agent = Agent()
-
-        # Choose TTS backend based on config
-        tts_provider = VOICE_CONFIG.get("tts_provider", "azure")
-        if tts_provider == "piper":
-            from voice.piper_tts_service import PiperTTSService
-
-            piper_cfg = VOICE_CONFIG.get("piper_tts", {})
-            voice_tts = PiperTTSService(
-                model_path=piper_cfg.get("model_path"),
-                length_scale=piper_cfg.get("length_scale", 1.0),
-                sentence_silence=piper_cfg.get("sentence_silence", 0.15),
-                speaker_id=piper_cfg.get("speaker_id"),
-            )
-            print(
-                f"🔊 [Voice] TTS provider: Piper (local, streaming={piper_cfg.get('streaming_enabled', False)})"
-            )
-        else:
-            tts_cfg = VOICE_CONFIG.get("tts", {})
-            voice_tts = TTSService(
-                voice_name=tts_cfg.get("voice_name"),
-                personas=tts_cfg.get("personas"),
-                active_persona=tts_cfg.get("active_persona"),
-            )
-            print(f"🔊 [Voice] TTS provider: Azure Speech")
-
-        orchestrator = Orchestrator(
-            wake_service=None, stt_service=None, agent=voice_agent, tts=voice_tts
-        )
-
-        stt_cfg = VOICE_CONFIG.get("stt", {})
-        stt_provider = VOICE_CONFIG.get("stt_provider", "deepgram")
-        sample_rate = stt_cfg.get("sample_rate", 16000)
-        noise_reduce = stt_cfg.get("noise_reduce", True)
-
-        if stt_provider == "deepgram":
-            dg_cfg = stt_cfg.get("deepgram", {})
-            voice_stt = DeepgramSTTService(
-                sample_rate=sample_rate,
-                on_text_callback=orchestrator.on_text,
-                language=dg_cfg.get("language", "en"),
-                noise_reduce=noise_reduce,
-            )
-        else:
-            w_cfg = stt_cfg.get("whisper", {})
-            voice_stt = STTService(
-                sample_rate=sample_rate,
-                on_text_callback=orchestrator.on_text,
-                model_size=w_cfg.get("model_size", "small"),
-                device=w_cfg.get("device", "cpu"),
-                noise_reduce=noise_reduce,
-            )
-
-        voice_wake = VoiceWakeService(on_wake_callback=orchestrator.on_wake)
-        orchestrator.wake = voice_wake
-        orchestrator.stt = voice_stt
-        voice_wake.orchestrator = orchestrator
-
-        voice_wake.start()
-        voice_stt.start()
-        
-        # ── Inject the running event loop so bg threads can publish events ──
-        # asyncio.get_event_loop() inside an async context returns the correct
-        # running loop. The orchestrator stores this and uses it in _publish()
-        # to safely call run_coroutine_threadsafe from wake/STT threads.
-        orchestrator._event_loop = asyncio.get_event_loop()
-        app.state.orchestrator = orchestrator
-        print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
-
-        from shared.state import voice_mark_ready
-        voice_mark_ready()
-
-    except Exception as e:
-        print(f"⚠️ [Voice] Startup failed: {e}")
-
-        from shared.state import voice_mark_failed
-        voice_mark_failed(str(e))
-
-    # 2. Bootstrap & Validate Registry (Slower metadata checks)
+    # ═══════════════════════════════════════════════════════════════
+    # PHASE 1: Fast critical path (sequential, <3s)
+    # These are lightweight and needed before anything else.
+    # ═══════════════════════════════════════════════════════════════
     from core.bootstrap import bootstrap_agents
     from core.registry import registry
 
@@ -163,33 +79,164 @@ async def lifespan(app: FastAPI):
 
     scheduler_service.initialize()
     persistence_manager.load_snapshot()
-    # ========== WATCHTOWER: OpenTelemetry bootstrap ==========
-    # Initializes tracing and exports spans to MongoDB + Jaeger.
-    # FastAPIInstrumentor auto-creates an HTTP span for every request.
-    # =========================================================
-    watchtower = settings.get("watchtower", {})
-    watchtower_enabled = os.getenv("WATCHTOWER_ENABLED", str(watchtower.get("enabled", True))).lower() == "true"
 
-    if watchtower_enabled:
+    from core.event_bus import event_bus
+    event_bus.initialize()
+    event_bus.start_heartbeat()
+
+    # Clean up stale sessions from previous crashes
+    from routers.runs import cleanup_stale_sessions
+    cleanup_stale_sessions()
+
+    _t1 = _time.monotonic()
+    print(f"✅ Phase 1 (core services) ready in {_t1 - _t0:.1f}s")
+
+    # ═══════════════════════════════════════════════════════════════
+    # PHASE 2: Heavy services IN PARALLEL (was sequential ~60-120s)
+    # Voice, MCP, Watchtower, and Message Bus are all independent.
+    # Running them concurrently cuts startup to max(individual) time.
+    # ═══════════════════════════════════════════════════════════════
+
+    async def _init_voice():
+        """Initialize voice pipeline (TTS model loading is the bottleneck)."""
+        from voice.orchestrator import Orchestrator
+        from voice.voice_wake_service import VoiceWakeService
+        from voice.stt_service import STTService
+        from voice.deepgram_stt_service import DeepgramSTTService
+        from voice.agent import Agent
+        from voice.tts_service import TTSService
+        from voice.config import VOICE_CONFIG
+
+        try:
+            voice_agent = Agent()
+
+            tts_provider = VOICE_CONFIG.get("tts_provider", "kokoro")
+            if tts_provider == "kokoro":
+                from voice.kokoro_tts_service import KokoroTTSService
+                kokoro_cfg = VOICE_CONFIG.get("kokoro_tts", {})
+                voice_tts = KokoroTTSService(
+                    model_path=kokoro_cfg.get("model_path"),
+                    voices_path=kokoro_cfg.get("voices_path"),
+                    personas=kokoro_cfg.get("personas"),
+                    active_persona="professional",
+                )
+                print(f"🔊 [Voice] TTS provider: Kokoro (local, streaming={kokoro_cfg.get('streaming_enabled', True)})")
+            elif tts_provider == "piper":
+                from voice.piper_tts_service import PiperTTSService
+                piper_cfg = VOICE_CONFIG.get("piper_tts", {})
+                voice_tts = PiperTTSService(
+                    model_path=piper_cfg.get("model_path"),
+                    length_scale=piper_cfg.get("length_scale", 1.0),
+                    sentence_silence=piper_cfg.get("sentence_silence", 0.15),
+                    speaker_id=piper_cfg.get("speaker_id"),
+                )
+                print(f"🔊 [Voice] TTS provider: Piper (local, streaming={piper_cfg.get('streaming_enabled', False)})")
+            else:
+                tts_cfg = VOICE_CONFIG.get("tts", {})
+                voice_tts = TTSService(
+                    voice_name=tts_cfg.get("voice_name"),
+                    personas=tts_cfg.get("personas"),
+                    active_persona=tts_cfg.get("active_persona"),
+                )
+                print(f"🔊 [Voice] TTS provider: Azure Speech")
+
+            orchestrator = Orchestrator(
+                wake_service=None, stt_service=None, agent=voice_agent, tts=voice_tts
+            )
+
+            stt_cfg = VOICE_CONFIG.get("stt", {})
+            stt_provider = VOICE_CONFIG.get("stt_provider", "moonshine")
+            sample_rate = stt_cfg.get("sample_rate", 16000)
+            noise_reduce = stt_cfg.get("noise_reduce", True)
+
+            if stt_provider == "moonshine":
+                from voice.moonshine_stt_service import MoonshineSTTService
+                m_cfg = stt_cfg.get("moonshine", {})
+                voice_stt = MoonshineSTTService(
+                    sample_rate=sample_rate,
+                    on_text_callback=orchestrator.on_text,
+                    model=m_cfg.get("model", "base"),
+                    noise_reduce=noise_reduce,
+                )
+            elif stt_provider == "deepgram":
+                dg_cfg = stt_cfg.get("deepgram", {})
+                voice_stt = DeepgramSTTService(
+                    sample_rate=sample_rate,
+                    on_text_callback=orchestrator.on_text,
+                    language=dg_cfg.get("language", "en"),
+                    noise_reduce=noise_reduce,
+                )
+            else:
+                w_cfg = stt_cfg.get("whisper", {})
+                voice_stt = STTService(
+                    sample_rate=sample_rate,
+                    on_text_callback=orchestrator.on_text,
+                    model_size=w_cfg.get("model_size", "small"),
+                    device=w_cfg.get("device", "cpu"),
+                    noise_reduce=noise_reduce,
+                )
+
+            voice_wake = VoiceWakeService(on_wake_callback=orchestrator.on_wake)
+            orchestrator.wake = voice_wake
+            orchestrator.stt = voice_stt
+            voice_wake.orchestrator = orchestrator
+
+            voice_wake.start()
+            voice_stt.start()
+
+            orchestrator._event_loop = asyncio.get_event_loop()
+            app.state.orchestrator = orchestrator
+            print(f"✅ [Voice] Pipeline WARM and listening (Provider: {stt_provider})")
+
+            from shared.state import voice_mark_ready
+            voice_mark_ready()
+
+        except Exception as e:
+            print(f"⚠️ [Voice] Startup failed: {e}")
+            from shared.state import voice_mark_failed
+            voice_mark_failed(str(e))
+
+    async def _init_watchtower():
+        """Initialize Watchtower tracing and health scheduler."""
+        nonlocal health_scheduler, health_mongo_client
+        watchtower = settings.get("watchtower", {})
+        if not watchtower.get("enabled", True):
+            return
+
         try:
             from ops.tracing import init_tracing
-
             init_tracing(
                 mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
                 jaeger_endpoint=watchtower.get("jaeger_endpoint"),
                 service_name=watchtower.get("service_name", "arcturus"),
             )
             from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
             FastAPIInstrumentor.instrument_app(app)
             print("✅ [Watchtower] Tracing initialized")
         except Exception as e:
             print(f"⚠️ [Watchtower] Tracing unavailable (MongoDB not running?): {e}")
 
+        try:
+        try:
+            from ops.tracing import init_tracing
+            init_tracing(
+                mongodb_uri=watchtower.get("mongodb_uri", "mongodb://localhost:27017"),
+                jaeger_endpoint=watchtower.get("jaeger_endpoint"),
+                service_name=watchtower.get("service_name", "arcturus"),
+            )
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            FastAPIInstrumentor.instrument_app(app)
+            print("✅ [Watchtower] Tracing initialized")
+        except Exception as e:
+            print(f"⚠️ [Watchtower] Tracing unavailable (MongoDB not running?): {e}")
+
+<<<<<<< HEAD
     # ========== WATCHTOWER: Periodic Health Checks ==========
     health_scheduler = None
     health_mongo_client = None
     if watchtower_enabled:
+=======
+>>>>>>> master
         try:
             from pymongo import MongoClient
             from ops.health.repository import HealthRepository
@@ -197,7 +244,7 @@ async def lifespan(app: FastAPI):
             from ops.health.alerts import AlertEvaluator
 
             mongo_uri = watchtower.get("mongodb_uri", "mongodb://localhost:27017")
-            health_mongo_client = MongoClient(mongo_uri)
+            health_mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=3000)
             health_coll = health_mongo_client["watchtower"]["health_checks"]
             health_repo = HealthRepository(health_coll)
             alert_evaluator = AlertEvaluator.from_config(watchtower.get("alert_rules", []))
@@ -208,55 +255,92 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"⚠️ [Watchtower] Health scheduler unavailable: {e}")
 
-    # 🎨 Restore Canvas snaps
+    async def _init_message_bus():
+        """Initialize Nexus gateway adapters."""
+        try:
+            from shared.state import initialize_message_bus
+            await initialize_message_bus()
+        except Exception as e:
+            print(f"⚠️ [Nexus] Message bus initialization failed: {e}")
+
+    # 🎨 Restore Canvas snaps (P06)
     from shared.state import get_canvas_runtime
-    get_canvas_runtime().load_snapshots()
-
-    await multi_mcp.start()
-
-    # 3. External Dependency Checks (Non-blocking or deferred)
     try:
-        subprocess.run(["git", "--version"], capture_output=True, check=True)
-        print("✅ Git found.")
-    except Exception:
-        print("⚠️ Git NOT found.")
-
-    try:
-        import requests  # type: ignore[import-untyped]
-
-        from config.settings_loader import get_ollama_url
-
-        requests.get(get_ollama_url("base"), timeout=1)
-        print("✅ Ollama found.")
-    except Exception:
-        print("⚠️ Ollama NOT found.")
-    # 🧠 Start Smart Sync in background
-    asyncio.create_task(background_smart_scan())
-
-    # 4. Initialize Nexus gateway adapters (creates httpx clients, Telegram polling, etc.)
-    try:
-        from shared.state import initialize_message_bus
-        await initialize_message_bus()
+        get_canvas_runtime().load_snapshots()
+        print("✅ [Canvas] Snapshots restored")
     except Exception as e:
-        print(f"⚠️ [Nexus] Message bus initialization failed: {e}")
+        print(f"⚠️ [Canvas] Snapshot restore failed: {e}")
 
-    # Phase 4: run sync (push then pull) on startup when SYNC_ENGINE_ENABLED + SYNC_SERVER_URL
+    # Declare nonlocal targets for watchtower
+    health_scheduler = None
+    health_mongo_client = None
+
+    # Run all heavy services in parallel
+    await asyncio.gather(
+        _init_voice(),
+        _init_mcp(),
+        _init_watchtower(),
+        _init_message_bus(),
+        return_exceptions=True,
+    )
+
+    _t2 = _time.monotonic()
+    print(f"✅ Phase 2 (heavy services) ready in {_t2 - _t1:.1f}s")
+
+    # ═══════════════════════════════════════════════════════════════
+    # PHASE 3: Background tasks (non-blocking, fire-and-forget)
+    # ═══════════════════════════════════════════════════════════════
+    async def _check_external_deps():
+        """Check git/ollama availability in background."""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "git", "--version",
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            await proc.communicate()
+            print("✅ Git found." if proc.returncode == 0 else "⚠️ Git NOT found.")
+        except Exception:
+            print("⚠️ Git NOT found.")
+        try:
+            import httpx
+            from config.settings_loader import get_ollama_url
+            async with httpx.AsyncClient(timeout=2) as client:
+                await client.get(get_ollama_url("base"))
+            print("✅ Ollama found.")
+        except Exception:
+            print("⚠️ Ollama NOT found.")
+
+    asyncio.create_task(_check_external_deps())
+    asyncio.create_task(background_smart_scan())
     asyncio.create_task(run_sync_background())
+
+    print(f"🏁 API ready in {_t2 - _t0:.1f}s (was ~60-120s sequential)")
 
     yield
 
     print("🛑 API Shutting down...")
+    # Cancel event bus heartbeat
+    from core.event_bus import event_bus
+    if hasattr(event_bus, "_heartbeat_task") and event_bus._heartbeat_task:
+        event_bus._heartbeat_task.cancel()
+
     if health_scheduler is not None:
         await health_scheduler.stop()
         print("🛑 [Watchtower] Health scheduler stopped")
     if health_mongo_client is not None:
         health_mongo_client.close()
+    
     from ops.tracing import shutdown_tracing
-
     shutdown_tracing()
+    
+    # 🎨 Save Canvas snaps (P06)
     from shared.state import get_canvas_runtime
+    try:
+        get_canvas_runtime().save_snapshots()
+        print("✅ [Canvas] Snapshots saved")
+    except Exception as e:
+        print(f"⚠️ [Canvas] Snapshot save failed: {e}")
 
-    get_canvas_runtime().save_snapshots()
     persistence_manager.save_snapshot()
     await multi_mcp.stop()
     # Stop the voice pipeline explicitly so native audio threads don't
@@ -405,6 +489,9 @@ app.include_router(pages_router.router, prefix="/api")
 from gateway_api.v1 import router as gateway_v1_router
 
 app.include_router(gateway_v1_router.router)
+
+from routers import visual_explainer as visual_explainer_router
+app.include_router(visual_explainer_router.router, prefix="/api")
 
 
 @app.get("/health")

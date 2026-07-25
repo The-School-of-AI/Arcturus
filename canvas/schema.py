@@ -38,6 +38,12 @@ class UserEventMessage(BaseModel):
     event_type: str  # e.g., "click", "input", "submit"
     component_id: str
     data: Dict[str, Any] = Field(default_factory=dict)
+    
+class UpdateHtmlMessage(BaseModel):
+    type: str = "updateHtml"
+    surfaceId: str
+    html: str
+    title: Optional[str] = None
 
 class CaptureSnapshotMessage(BaseModel):
     type: str = "captureSnapshot"
@@ -58,5 +64,6 @@ class CanvasMessage(BaseModel):
         EvalJSMessage,
         UserEventMessage,
         CaptureSnapshotMessage,
-        SnapshotResultMessage
+        SnapshotResultMessage,
+        UpdateHtmlMessage
     ]

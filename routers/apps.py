@@ -227,10 +227,10 @@ async def generate_from_report(request: GenerateFromReportRequest):
         print(f"[GenerateFromReport] Using model: {model} (from config key: {model_key})")
         
         # Call Gemini
-        from google import genai
         from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-        
+        from config.gemini_client import get_gemini_client
+        client = get_gemini_client()
+
         # No Google Search needed - we have the report
         print("[GenerateFromReport] Calling Gemini...")
         response = client.models.generate_content(
@@ -351,9 +351,9 @@ async def hydrate_app(app_id: str, request: HydrateRequest = None):
         print(f"[Hydrate] Using model: {model} (from config key: {model_key})")
         
         # Call Gemini for hydration/refinement with Google Search enabled
-        from google import genai
         from google.genai import types
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        from config.gemini_client import get_gemini_client
+        client = get_gemini_client()
         
         # Enable Google Search grounding for real-time data
         google_search_tool = types.Tool(google_search=types.GoogleSearch())

@@ -103,9 +103,6 @@ class MultiMCP:
             
             # Remove from active sessions/tools regardless of config presence
             if name in self.sessions:
-                # We can't strictly 'close' the session easily without closing the whole stack
-                # unless we manage per-session exit stacks (which would be better but complex refactor)
-                # For now, just removing it prevents further routing.
                 print(f"  🗑️ Removed server '{name}' from sessions")
                 del self.sessions[name]
                 
@@ -118,36 +115,27 @@ class MultiMCP:
             return True
         except Exception as e:
             print(f"  ⚠️ Error removing server {name}: {e}")
-            # Still return True if we managed to at least remove it from config? 
-            # Or False? Let's return True effectively as "we tried our best to forget it"
             return True
 
     async def _start_server(self, name: str, config: dict):
         """Start a single server with timeout protection"""
-        # Skip if explicitly disabled
         if config.get("enabled", True) is False:
             print(f"  ⏭️ [dim]Server '{name}' is disabled in config. Skipping.[/dim]")
             return False
 
         try:
             cmd = config.get("command", "uv")
-            args = list(config.get("args", [])) # Create copy to prevent in-place mutation
+            args = list(config.get("args", [])) 
             server_type = config.get("type", "local-script")
-            env = config.get("env", None) # Optional env vars
+            env = config.get("env", None) 
 
-            # --- Pre-processing for different types ---
-            
             if server_type == "local-script":
-                # Ensure we point to the script in this directory
-                script_name = args[-1] # Assume last arg is script
+                script_name = args[-1]
                 if not Path(script_name).is_absolute() and (self.base_dir / script_name).exists():
-                     # Reconstruct args with absolute path
-                     # args usually: ["run", "server_browser.py"]
                      script_path = str(self.base_dir / script_name)
                      args = args[:-1] + [script_path]
 
             elif server_type == "stdio-git":
-                # Clone repo and setup
                 repo_url = config.get("source")
                 if not repo_url:
                     raise ValueError("Missing 'source' (git url) for stdio-git server")
@@ -165,93 +153,47 @@ class MultiMCP:
                      if proc.returncode != 0:
                          raise RuntimeError(f"Git clone failed for {name}")
 
-
-                # Configure command to run from that directory with uv
-                # We typically run `uv run --directory <repo> <script>`
                 cmd = "uv"
-                
-                if cmd == "uv" and "run" in args:
-                     # Inject --directory <path> after 'run' 
-                     # args is likely ["run", "script.py"]
-                     # We want ["run", "--directory", str(server_dir), "script.py"]
-                     
-                     # Find index of 'run'
+                if "run" in args:
                      try:
                          run_idx = args.index("run")
-                         # Insert directory args after run
                          args.insert(run_idx + 1, "--directory")
                          args.insert(run_idx + 2, str(server_dir))
                          
-                         # Check for requirements.txt to install dependencies automatically
                          req_file = server_dir / "requirements.txt"
                          if req_file.exists():
                              args.insert(run_idx + 3, "--with-requirements")
                              args.insert(run_idx + 4, str(req_file))
                              print(f"  📦 Detected requirements.txt for {name}, auto-installing dependencies...")
                          
-                         # --- Smart Entry Point Detection ---
-                         # The config might default to 'src/server.py', but the repo might use 'yfinance_mcp_server.py'
-                         # We check the LAST argument which is usually the script path
                          script_arg_idx = -1
                          current_script = args[script_arg_idx]
-                         
-                         # Construct full path to check
                          script_path = server_dir / current_script
                          if not script_path.exists():
                              print(f"  ⚠️ Configured script '{current_script}' not found in {name}. Attempting auto-detection...")
-                             
-                             # Search candidates
                              candidates = list(server_dir.glob("*_mcp_server.py")) + \
                                           list(server_dir.glob("server.py")) + \
                                           list(server_dir.glob("src/server.py")) + \
                                           list(server_dir.glob("*.py"))
-                             
-                             # Filter out non-server looking files if possible, but taking the first specific match is good
                              best_candidate = None
                              for c in candidates:
-                                 # Prefer *mcp_server.py or server.py
                                  if "mcp_server" in c.name or c.name == "server.py":
                                      best_candidate = c
                                      break
-                             
                              if not best_candidate and candidates:
-                                 # Fallback to first python file if it looks like a server?
-                                 # Just take the first one (often there's only one main script in simple repos)
                                  best_candidate = candidates[0]
-                             
                              if best_candidate:
-                                 # Update args
                                  new_script = str(best_candidate.relative_to(server_dir))
                                  args[script_arg_idx] = new_script
                                  print(f"  ✅ Auto-detected entry point: {new_script}")
                              else:
                                  print(f"  [ERROR] Could not auto-detect entry point for {name}")
-
                      except ValueError:
                          pass
             
-            # --- Execution ---
-
             final_env = os.environ.copy()
             if env:
                 final_env.update(env)
-
-            # Check if uv exists fallback
-            if cmd == "uv" and not shutil.which("uv"):
-                cmd = sys.executable
-                # This fallback is flaky for complex args, keep simple
-                if args[0] == "run":
-                     # If falling back to python, we need to handle the directory/cwd manually
-                     # or just hope it works?
-                     # Ideally we shouldn't fallback for git repos if they rely on uv dependencies
-                     print(f"  ⚠️ 'uv' not found. Falling back to system python is risky for {name}.")
-                     # Try to fix path to be absolute if we are not using uv (and not changing cwd)
-                     # But we can't easily change cwd for just this process with StdioServerParameters efficiently?
-                     # Actually we can just run python <full_path_to_script>
-                     # Remove 'run', '--directory', etc.
-                     # This is Getting Complicated. Let's assume UV exists for 'stdio-git'.
-                     pass # Rely on uv being present
-
 
             server_params = StdioServerParameters(
                 command=cmd,
@@ -259,21 +201,16 @@ class MultiMCP:
                 env=final_env
             )
             
-            # PID Tracking Setup
             import psutil
             parent_proc = psutil.Process()
             children_before = set(p.pid for p in parent_proc.children(recursive=False))
 
-            # Connect with timeout
-            async with asyncio.timeout(20): # 20s timeout (increased for installations)
+            async with asyncio.timeout(20):
                 read, write = await self.exit_stack.enter_async_context(stdio_client(server_params))
                 
-                # Detect new PID
                 children_after = set(p.pid for p in parent_proc.children(recursive=False))
                 new_pids = children_after - children_before
                 if new_pids:
-                    # We assume the new process is the server
-                    # Just take the first one found
                     pid = list(new_pids)[0]
                     self.server_pids[name] = pid
                     print(f"  🆔 Server '{name}' started with PID: {pid}")
@@ -281,7 +218,6 @@ class MultiMCP:
                 session = await self.exit_stack.enter_async_context(ClientSession(read, write))
                 await session.initialize()
                 
-                # List tools
                 if name in self._cached_metadata:
                     print(f"  📦 [cyan]{name}[/cyan] tools loaded from cache.")
                     cached_tools = []
@@ -299,13 +235,13 @@ class MultiMCP:
                     print(f"  [DONE] [cyan]{name}[/cyan] connected. Tools: {len(result.tools)}")
                 
                 self.sessions[name] = session
+                return True
 
         except asyncio.TimeoutError:
              print(f"  [TIMEOUT] [yellow]{name}[/yellow] timed out during startup.")
         except Exception as e:
             print(f"  [ERROR] [red]{name}[/red] failed to start: {e}")
-        except BaseException as e:
-            print(f"  [CRITICAL] [red]{name}[/red]: {e}")
+        return False
 
     async def start(self):
         """Start the lifecycle manager task"""
@@ -314,7 +250,6 @@ class MultiMCP:
             
         print("[bold green][START] Starting MCP Lifecycle Manager...[/bold green]")
         self._manager_task = asyncio.create_task(self._lifecycle_manager())
-        # Give it a moment to enter the context
         await asyncio.sleep(0.1)
 
     async def _lifecycle_manager(self):
@@ -335,7 +270,6 @@ class MultiMCP:
                     cmd, data, future = await self._command_queue.get()
                     try:
                         if cmd == "STOP":
-                            print("  🛑 MCP Manager received STOP command.")
                             if not future.done(): future.set_result(True)
                             self._command_queue.task_done()
                             break
@@ -365,23 +299,18 @@ class MultiMCP:
             await self._manager_task
             self._manager_task = None
         elif self._manager_task is None:
-            # Fallback for manual stop if task never started
             await self.exit_stack.aclose()
 
     def get_all_tools(self) -> list:
-        """Get all tools from all connected servers"""
         all_tools = []
         for tools in self.tools.values():
             all_tools.extend(tools)
         return all_tools
     
     def get_connected_servers(self) -> list:
-        """Return list of connected server names"""
         return list(self.sessions.keys())
 
     async def function_wrapper(self, tool_name: str, *args):
-        """Execute a tool using positional arguments by mapping them to schema keys"""
-        # Find tool definition
         target_tool = None
         for tools in self.tools.values():
             for tool in tools:
@@ -393,7 +322,6 @@ class MultiMCP:
         if not target_tool:
             return f"Error: Tool {tool_name} not found"
 
-        # Map positional args to keyword args based on schema
         arguments = {}
         schema = target_tool.inputSchema
         if schema and 'properties' in schema:
@@ -404,7 +332,6 @@ class MultiMCP:
         
         try:
             result = await self.route_tool_call(tool_name, arguments)
-            # Unpack CallToolResult
             if hasattr(result, 'content') and result.content:
                 return result.content[0].text
             return str(result)
@@ -412,11 +339,9 @@ class MultiMCP:
             return f"Error executing {tool_name}: {str(e)}"
 
     def get_tools_from_servers(self, server_names: list) -> list:
-        """Get flattened list of tools from requested servers"""
         all_tools = []
         for name in server_names:
             if name in self.tools:
-                # Filter out disabled tools
                 for tool in self.tools[name]:
                     key = f"{name}:{tool.name}"
                     if key not in self.disabled_tools:
@@ -424,11 +349,9 @@ class MultiMCP:
         return all_tools
 
     async def call_tool(self, server_name: str, tool_name: str, arguments: dict):
-        """Call a tool on a specific server with active call tracking"""
         if server_name not in self.sessions:
             raise ValueError(f"Server '{server_name}' not connected")
         
-        # Track active call
         self.active_calls[server_name] += 1
         try:
             return await self.sessions[server_name].call_tool(tool_name, arguments)
@@ -436,36 +359,21 @@ class MultiMCP:
             self.active_calls[server_name] -= 1
 
     async def drain_server(self, name: str, timeout: float = 30.0) -> bool:
-        """Wait for active calls to finish before stopping"""
         if self.active_calls[name] == 0:
             return True
-            
-        print(f"  ⏳ Draining '{name}' ({self.active_calls[name]} active calls)...")
         start_time = asyncio.get_running_loop().time()
-        
         while self.active_calls[name] > 0:
             if asyncio.get_running_loop().time() - start_time > timeout:
-                print(f"  ⚠️ Drain timeout for '{name}' ({self.active_calls[name]} remaining)")
                 return False
             await asyncio.sleep(0.5)
-            
-        print(f"  [DONE] Drained '{name}'")
         return True
 
-    # Helper to route tool call by finding which server has it
     async def route_tool_call(self, tool_name: str, arguments: dict):
         from core.circuit_breaker import get_breaker, CircuitOpenError
-        
-        # Get or create circuit breaker for this tool
         breaker = get_breaker(tool_name, failure_threshold=5, recovery_timeout=60.0)
-        
-        # Check if circuit allows execution
         if not breaker.can_execute():
             status = breaker.get_status()
-            raise CircuitOpenError(
-                f"Circuit open for '{tool_name}' - service failing. "
-                f"Retry in {status['time_until_retry']:.0f}s"
-            )
+            raise CircuitOpenError(f"Circuit open for '{tool_name}' - service failing. Retry in {status['time_until_retry']:.0f}s")
         
         try:
             for name, tools in self.tools.items():
@@ -476,51 +384,31 @@ class MultiMCP:
                         return result
             raise ValueError(f"Tool '{tool_name}' not found in any server")
         except CircuitOpenError:
-            raise  # Re-raise circuit errors without recording failure
+            raise
         except Exception as e:
             breaker.record_failure()
             raise
 
     def _load_cache(self) -> dict:
-        """Load metadata cache from file"""
         if self.cache_path.exists():
             try:
-                import json
                 return json.loads(self.cache_path.read_text())
-            except Exception as e:
-                print(f"  ⚠️ Failed to load MCP cache: {e}")
+            except Exception: pass
         return {}
 
     def _save_to_cache(self, server_name: str, tools: list):
-        """Save tool metadata to persistent cache"""
         try:
-            import json
-            # Ensure directory exists
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Load existing
             cache = self._load_cache()
-            
-            # Update
             tool_list = []
             for t in tools:
-                tool_list.append({
-                    "name": t.name,
-                    "description": t.description,
-                    "inputSchema": t.inputSchema
-                })
+                tool_list.append({"name": t.name, "description": t.description, "inputSchema": t.inputSchema})
             cache[server_name] = tool_list
-            
-            # Write back
             self.cache_path.write_text(json.dumps(cache, indent=2))
-            print(f"  💾 Cached metadata for [cyan]{server_name}[/cyan]")
-        except Exception as e:
-            print(f"  ⚠️ Failed to save MCP cache for {server_name}: {e}")
+        except Exception: pass
 
     async def refresh_server(self, server_name: str):
-        """Force refresh tool metadata for a server"""
         if server_name in self.sessions:
-            print(f"  🔄 Refreshing tools for [cyan]{server_name}[/cyan]...")
             result = await self.sessions[server_name].list_tools()
             self.tools[server_name] = result.tools
             self._save_to_cache(server_name, result.tools)
@@ -528,80 +416,38 @@ class MultiMCP:
         return False
         
     def get_server_readme(self, server_name: str) -> str:
-        """Get the README content for a server"""
         config = self.server_configs.get(server_name)
-        if not config:
-            return None
-            
+        if not config: return None
         repo_path = None
-        
-        # Determine path based on type
         if config.get("type") == "stdio-git":
              repo_path = self.base_dir.parent / "data" / "mcp_repos" / server_name
         elif config.get("type") == "local-script":
-             # Use the base dir
              repo_path = self.base_dir
-        
         if repo_path:
-            # Try potential readme names, prioritizing server-specific ones
-            candidates = [
-                f"README_{server_name}.md",
-                f"docs/README_{server_name}.md",
-                "README.md", 
-                "readme.md", 
-                "README.txt", 
-                "README"
-            ]
-            
+            candidates = [f"README_{server_name}.md", f"docs/README_{server_name}.md", "README.md", "README.txt", "README"]
             for name in candidates:
                 p = repo_path / name
-                if p.exists():
-                    return p.read_text(encoding="utf-8", errors="replace")
-        
+                if p.exists(): return p.read_text(encoding="utf-8", errors="replace")
         return None
 
     def list_active_servers(self) -> list:
-        """Return list of active servers with PIDs"""
         active = []
-        for name, session in self.sessions.items():
+        for name in self.sessions:
             pid = self.server_pids.get(name)
-            active.append({
-                "name": name,
-                "status": "connected",
-                "pid": pid,
-                "type": self.server_configs.get(name, {}).get("type", "unknown")
-            })
+            active.append({"name": name, "status": "connected", "pid": pid, "type": self.server_configs.get(name, {}).get("type", "unknown")})
         return active
 
     async def kill_server(self, name: str) -> bool:
-        """Force kill a server process"""
         import signal
-        import os
-        
         pid = self.server_pids.get(name)
-        if not pid:
-            print(f"  ⚠️ No PID known for server '{name}'")
-            return False
-            
+        if not pid: return False
         try:
-            os.kill(pid, signal.SIGKILL) # Force kill
-            print(f"  💀 Killed server '{name}' (PID {pid})")
-            
-            # Clean up session (best effort)
-            if name in self.sessions:
-                del self.sessions[name]
-            
-            if name in self.server_pids:
-                del self.server_pids[name]
-                
-            return True
-        except ProcessLookupError:
-            print(f"  ⚠️ Process {pid} for '{name}' not found (already dead?)")
+            os.kill(pid, signal.SIGKILL)
             if name in self.sessions: del self.sessions[name]
             if name in self.server_pids: del self.server_pids[name]
             return True
-        except Exception as e:
-            print(f"  [ERROR] Failed to kill '{name}': {e}")
-            return False
-
-
+        except ProcessLookupError:
+            if name in self.sessions: del self.sessions[name]
+            if name in self.server_pids: del self.server_pids[name]
+            return True
+        except Exception: return False

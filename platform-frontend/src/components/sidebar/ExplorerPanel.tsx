@@ -625,6 +625,10 @@ export const ExplorerPanel: React.FC = () => {
                         ) : (
                             isAnalyzing ? (
                                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            ) : creating ? (
+                                <div className="w-full px-2">
+                                    {renderCreationInput(explorerRootPath!, -1)}
+                                </div>
                             ) : (
                                 <div className="flex flex-col items-center gap-2">
                                     <p className="text-xs text-muted-foreground">No files found</p>

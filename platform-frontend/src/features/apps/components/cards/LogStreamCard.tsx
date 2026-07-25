@@ -12,7 +12,7 @@ export const LogStreamCard: React.FC<{ title?: string }> = ({ title = "Execution
 
     return (
         <BaseCard title={title}>
-            <div className=" text-[9px] space-y-1.5">
+            <div className=" text-2xs space-y-1.5">
                 {logs.map((log, i) => (
                     <div key={i} className="flex gap-2 leading-tight">
                         <span className="text-muted-foreground/40 shrink-0">{log.time}</span>
@@ -27,7 +27,7 @@ export const LogStreamCard: React.FC<{ title?: string }> = ({ title = "Execution
                 ))}
                 <div className="pt-2 animate-pulse flex items-center gap-1">
                     <div className="w-1 h-3 bg-primary" />
-                    <span className="text-[8px] text-primary/60 italic uppercase tracking-widest">Listening for events...</span>
+                    <span className="text-[8px] text-primary/60 italic uppercase tracking-wide">Listening for events...</span>
                 </div>
             </div>
         </BaseCard>

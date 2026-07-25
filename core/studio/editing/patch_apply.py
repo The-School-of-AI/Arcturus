@@ -429,6 +429,41 @@ def _normalize_after_patch(artifact_type: str, tree_dict: dict[str, Any]) -> dic
     return tree_dict
 
 
+# --- HTML invalidation ---
+
+def _invalidate_html_for_target(tree: Dict[str, Any], target: Dict[str, Any]) -> None:
+    """Null out html field on slides affected by a patch.
+
+    When a slide's structured fields are edited, the html (LLM-generated
+    visual) is stale and must be cleared so the frontend falls back to
+    the structured renderer.
+    """
+    kind = target.get("kind")
+    slides = tree.get("slides", [])
+
+    if kind == "deck":
+        # Deck-level edits may affect all slides (e.g. title changes)
+        for s in slides:
+            s.pop("html", None)
+    elif kind == "slide_index":
+        idx = (target.get("index", 1)) - 1
+        if 0 <= idx < len(slides):
+            slides[idx].pop("html", None)
+    elif kind == "slide_id":
+        slide_id = target.get("id")
+        for s in slides:
+            if s.get("id") == slide_id:
+                s.pop("html", None)
+                break
+    elif kind == "slide_element":
+        element_id = target.get("element_id")
+        for s in slides:
+            for e in s.get("elements", []):
+                if e.get("id") == element_id:
+                    s.pop("html", None)
+                    break
+
+
 # --- Main entry point ---
 
 def apply_patch_to_content_tree(
@@ -483,6 +518,11 @@ def apply_patch_to_content_tree(
 
         else:
             raise ValueError(f"Unknown op type: {op_type!r}")
+
+    # 3b. Invalidate LLM-generated HTML on edited slides so frontend falls back
+    #     to structured renderers until next full regeneration.
+    if artifact_type == "slides":
+        _invalidate_html_for_target(new_tree, target)
 
     # 4. Coerce common LLM mistakes (dict-for-string, etc.) before validation
     coerce_warnings = _coerce_llm_value_types(artifact_type, new_tree)

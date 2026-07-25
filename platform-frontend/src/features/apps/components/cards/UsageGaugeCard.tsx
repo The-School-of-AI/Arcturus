@@ -157,7 +157,7 @@ export default function Stats12() {
               <span className="text-sm flex-1 truncate leading-4">
                 {item.name}
               </span>
-              <span className="text-xs font-medium tabular-nums tracking-tighter text-muted-foreground">
+              <span className="text-xs font-medium tabular-nums tracking-tight text-muted-foreground">
                 {item.current} /{" "}
                 <span className="text-foreground">{item.limit}</span>
               </span>

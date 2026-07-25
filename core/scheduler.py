@@ -182,6 +182,39 @@ class SchedulerService:
         rows.reverse()
         return rows
 
+    def delete_job_history_entry(self, job_id: str, run_id: str) -> bool:
+        """Delete a single history entry by run_id. Rewrites the JSONL file without the entry."""
+        if not JOB_HISTORY_FILE.exists():
+            return False
+
+        try:
+            lines = JOB_HISTORY_FILE.read_text(encoding="utf-8").splitlines()
+        except (UnicodeDecodeError, OSError):
+            return False
+
+        kept: list[str] = []
+        found = False
+        for raw_line in lines:
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("job_id") == job_id and payload.get("run_id") == run_id:
+                found = True
+                continue
+            kept.append(json.dumps(payload))
+
+        if found:
+            if not JOB_HISTORY_FILE.parent.exists():
+                JOB_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = JOB_HISTORY_FILE.with_suffix(".jsonl.tmp")
+            temp_path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+            temp_path.replace(JOB_HISTORY_FILE)
+        return found
+
     def _schedule_job(self, job: JobDefinition):
         """Internal method to add job to APScheduler."""
 
@@ -234,17 +267,16 @@ class SchedulerService:
                         logger.info(msg)
                         await event_bus.publish("log", "scheduler", {"message": msg})
 
-                result = await process_run(run_id, effective_query)
+                # Single execution call with skill_id for post-processing
+                result = await process_run(run_id, effective_query, skill_id=job.skill_id)
 
+                # Post-execution skill hook
                 skill_result = None
                 if skill and result:
                     skill_result = await skill.on_run_success(
                         result if isinstance(result, dict) else {"output": str(result)}
                     )
-                # 3. Execution (The standard run, now skill-aware)
-                result = await process_run(run_id, job.query, skill_id=job.skill_id)
 
-                # Update job output using skill summary if available
                 skill_summary = result.get("skill_summary") if result else None
                 skill_file_path = result.get("skill_file_path") if result else None
 
@@ -258,29 +290,38 @@ class SchedulerService:
                     },
                 )
 
-                job.last_output = (
-                    skill_result.get("summary")
-                    if skill_result
-                    else (result.get("summary") if result else "Success")
-                )
+                # Determine best output: prefer the longest meaningful content
+                full_output = (result.get("output") or result.get("summary") or "") if result else ""
+                skill_out = ""
+                if skill_result and skill_result.get("summary"):
+                    skill_out = skill_result["summary"]
+                elif skill_summary:
+                    skill_out = skill_summary
 
-                # Update job with result
-                job.last_output = skill_summary if skill_summary else (result.get("summary") if result else "Success")
+                job.last_output = full_output if len(full_output) >= len(skill_out) else skill_out
+                if not job.last_output:
+                    job.last_output = "Success"
+                
                 self.save_jobs()
 
-                notif_body = f"Job '{job.name}' finished.\n\n"
-                if skill_summary:
-                    notif_body += f"**Summary**: {skill_summary}\n\n"
-                elif result and result.get("summary"):
-                    notif_body += f"**Summary**: {result['summary'][:200]}...\n\n"
+                # Detect if the run actually failed internally
+                _fail_indicators = ("failed", "error", "❌", "exception", "timed out")
+                _output_lower = (job.last_output or "").lower()
+                _has_failures = result.get("has_failures", False) if result else False
+                run_status = "success"
+                if _has_failures or any(ind in _output_lower for ind in _fail_indicators):
+                    run_status = "partial_failure"
 
+                notif_body = f"Job '{job.name}' finished.\n\n"
+                if job.last_output and job.last_output != "Success":
+                    notif_body += f"**Summary**: {job.last_output[:200]}...\n\n"
                 notif_body += f"*Run ID: {run_id}*"
 
                 send_to_inbox(
                     source="Scheduler",
                     title=f"Completed: {job.name}",
                     body=notif_body,
-                    priority=1,
+                    priority=1 if run_status == "success" else 2,
                     metadata={
                         "job_id": job.id,
                         "run_id": run_id,
@@ -292,7 +333,7 @@ class SchedulerService:
                 self._record_job_history(
                     job_id=job.id,
                     run_id=run_id,
-                    status="success",
+                    status=run_status,
                     started_at=started_at,
                     finished_at=finished_at,
                     output_summary=job.last_output,
@@ -353,16 +394,9 @@ class SchedulerService:
         agent_type: str,
         query: str,
         timezone: str = "UTC",
+        skill_id: Optional[str] = None,
     ) -> JobDefinition:
-        """Add a new scheduled job."""
-        from .skills.manager import skill_manager
-
-        if not skill_manager.skill_classes:
-            skill_manager.initialize()
-
-        skill_id = skill_manager.match_intent(query)
-        if skill_id:
-            logger.info(f"🧠 Smart Scheduler: Matched query '{query}' to Skill '{skill_id}'")
+        """Add a new scheduled job. skill_id=None means no skill, not auto-match."""
 
         job_id = str(uuid.uuid4())[:8]
         job = JobDefinition(
@@ -380,6 +414,32 @@ class SchedulerService:
         except Exception:
             self.jobs.pop(job_id, None)
             raise
+        self.save_jobs()
+        return job
+
+    def update_job(
+        self,
+        job_id: str,
+        name: Optional[str] = None,
+        cron_expression: Optional[str] = None,
+        query: Optional[str] = None,
+    ) -> JobDefinition:
+        """Update an existing job's name, cron, or query."""
+        if job_id not in self.jobs:
+            raise KeyError(job_id)
+
+        job = self.jobs[job_id]
+        if name is not None:
+            job.name = name
+        if query is not None:
+            job.query = query
+        if cron_expression is not None:
+            job.cron_expression = cron_expression
+            # Re-schedule with new cron
+            if self.scheduler.get_job(job_id):
+                self.scheduler.remove_job(job_id)
+            self._schedule_job(job)
+
         self.save_jobs()
         return job
 

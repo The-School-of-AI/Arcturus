@@ -1,10 +1,14 @@
 """Deterministic slide sequence planner for Forge slides."""
 
 import hashlib
+import logging
 import random
 import re
+from typing import Any, Dict, List
 
 from core.studio.slides.types import NARRATIVE_ARC, SLIDE_TYPE_ELEMENTS
+
+logger = logging.getLogger(__name__)
 
 # Structural slide types that are auto-generated and do NOT count
 # toward the user's requested slide_count.
@@ -231,6 +235,108 @@ def _prevent_consecutive_types(sequence: list[str], rng: random.Random) -> list[
     return result
 
 
+# ---------------------------------------------------------------------------
+# Pre-validation normalization for raw LLM slide output
+# ---------------------------------------------------------------------------
+
+# Fields that the LLM sometimes uses instead of "content"
+_CONTENT_ALIASES = ("text_content", "text", "value", "body", "description")
+
+# Fields that the LLM sometimes uses instead of "type"
+_TYPE_ALIASES = ("element_type", "kind", "role")
+
+
+def normalize_slides_content_tree_raw(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize raw LLM JSON for slides before Pydantic validation.
+
+    Fixes common LLM deviations:
+    - Missing ``id`` on slides and elements (auto-generates them)
+    - Wrong field names: ``text_content`` → ``content``, etc.
+    - Dict-for-string coercion on top-level and element fields
+    - Missing ``elements`` list (creates empty list)
+    - Missing ``slide_type`` (defaults to "content")
+
+    Mutates ``parsed`` in-place and returns it.
+    """
+    # --- Top-level string coercion ---
+    for key in ("deck_title", "subtitle"):
+        if isinstance(parsed.get(key), dict):
+            parsed[key] = _extract_text(parsed[key]) or ""
+
+    slides = parsed.get("slides")
+    if not isinstance(slides, list):
+        return parsed
+
+    for si, slide in enumerate(slides):
+        if not isinstance(slide, dict):
+            continue
+
+        # Auto-generate slide id
+        if "id" not in slide or not slide["id"]:
+            slide["id"] = f"s{si + 1}"
+
+        # Default slide_type
+        if "slide_type" not in slide or not slide["slide_type"]:
+            slide["slide_type"] = "content"
+
+        # Coerce slide-level string fields from dicts
+        for key in ("title", "speaker_notes"):
+            if isinstance(slide.get(key), dict):
+                slide[key] = _extract_text(slide[key]) or ""
+
+        # Ensure elements is a list
+        if "elements" not in slide or not isinstance(slide.get("elements"), list):
+            slide["elements"] = []
+
+        for ei, el in enumerate(slide["elements"]):
+            if not isinstance(el, dict):
+                continue
+
+            # Auto-generate element id
+            if "id" not in el or not el["id"]:
+                el["id"] = f"s{si + 1}_e{ei + 1}"
+
+            # Fix type aliases
+            if "type" not in el or not el["type"]:
+                for alias in _TYPE_ALIASES:
+                    if alias in el:
+                        el["type"] = el.pop(alias)
+                        break
+                else:
+                    el["type"] = "body"  # safe default
+
+            # Fix content aliases: text_content, text, value, body → content
+            if "content" not in el:
+                for alias in _CONTENT_ALIASES:
+                    if alias in el:
+                        el["content"] = el.pop(alias)
+                        break
+
+            # Coerce id/type from dicts
+            for key in ("id", "type"):
+                if isinstance(el.get(key), dict):
+                    el[key] = _extract_text(el[key]) or el[key]
+
+    logger.debug("Normalized slides raw content tree (%d slides)", len(slides))
+    return parsed
+
+
+def _extract_text(d: dict) -> str | None:
+    """Extract a string value from a dict the LLM created instead of a string.
+
+    Tries common keys: text, value, content, title, name, label, body.
+    """
+    for key in ("text", "value", "content", "title", "name", "label", "body"):
+        v = d.get(key)
+        if isinstance(v, str) and v:
+            return v
+    # Last resort: first string value
+    for v in d.values():
+        if isinstance(v, str) and v:
+            return v
+    return None
+
+
 def enforce_slide_count(
     content_tree: "SlidesContentTree",
     target_count: int | None = None,
@@ -340,4 +446,61 @@ def enforce_slide_count(
             body.append(filler)
 
     slides = [opening] + body + [closing]
+    return content_tree.model_copy(update={"slides": slides})
+
+
+# ── Per-slide visual style normalization ────────────────────────────────────
+
+
+def _migrate_visual_style(vs: dict) -> dict:
+    """Convert old enum-based visual_style to new slide_style format."""
+    result: dict = {}
+    bg_variant = vs.get("bg_variant", "solid")
+    if bg_variant == "gradient":
+        result["background"] = {"value": "linear-gradient(135deg, var(--theme-bg), var(--theme-primary-8))"}
+    elif bg_variant == "accent_wash":
+        result["background"] = {"value": "var(--theme-accent-wash)"}
+    elif bg_variant == "dark_invert":
+        result["background"] = {"value": "var(--theme-title-bg)"}
+    # solid = no override, use theme default
+
+    card_style = vs.get("card_style")
+    if card_style == "glass":
+        result["card"] = {
+            "background": "rgba(255,255,255,0.06)",
+            "border": "1px solid rgba(255,255,255,0.1)",
+            "backdropFilter": "blur(8px)",
+        }
+    elif card_style == "elevated":
+        result["card"] = {"boxShadow": "0 4px 12px rgba(0,0,0,0.1)"}
+    elif card_style == "outlined":
+        result["card"] = {"border": "1px solid rgba(0,0,0,0.12)", "background": "transparent"}
+
+    return result
+
+
+def normalize_visual_styles(content_tree: "SlidesContentTree") -> "SlidesContentTree":
+    """Ensure every slide has a slide_style in metadata.
+
+    Migrates old visual_style format to slide_style if present.
+    No aesthetic guardrails — LLM has full creative control.
+    Only validates structural correctness.
+    """
+    slides = list(content_tree.slides)
+    if not slides:
+        return content_tree
+
+    for slide in slides:
+        meta = dict(slide.metadata or {})
+
+        # Migration: if old visual_style exists but no slide_style, convert
+        if "visual_style" in meta and "slide_style" not in meta:
+            meta["slide_style"] = _migrate_visual_style(meta.pop("visual_style"))
+
+        # Ensure slide_style exists as a dict
+        if not isinstance(meta.get("slide_style"), dict):
+            meta["slide_style"] = {}
+
+        slide.metadata = meta
+
     return content_tree.model_copy(update={"slides": slides})

@@ -1,20 +1,53 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
-import { WorkspacePanel } from '../workspace/WorkspacePanel';
-import { GraphCanvas } from '../graph/GraphCanvas';
-import { FlowWorkspace } from '../workspace/FlowWorkspace';
-import { RunTimeline } from '@/features/replay/RunTimeline';
-import { GripVertical } from 'lucide-react';
-import { DocumentViewer } from '../rag/DocumentViewer';
-import { DocumentAssistant } from '../rag/DocumentAssistant';
-import { NotesEditor } from '../notes/NotesEditor';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
-import { Meteors } from '../ui/meteors';
-import { InboxPanel } from '../inbox/InboxPanel';
-import CanvasHost from '@/features/canvas/CanvasHost';
 import useVoice from '@/hooks/useVoice';
+import { useSwarmStore } from '@/features/swarm/useSwarmStore';
+import { Loader2 } from 'lucide-react';
+
+// ── Lazy-loaded feature components (code-split per tab) ──────────────────────
+// These are heavy components that import Monaco, PDF viewer, graphs, etc.
+// Loading them lazily cuts initial bundle parse time dramatically.
+const lazy = (fn: () => Promise<any>, name: string) =>
+    React.lazy(() => fn().then(m => ({ default: m[name] || m.default })));
+
+const AppGrid = lazy(() => import('@/features/apps/components/AppGrid'), 'AppGrid');
+const AppInspector = lazy(() => import('@/features/apps/components/AppInspector'), 'AppInspector');
+const GraphCanvas = lazy(() => import('../graph/GraphCanvas'), 'GraphCanvas');
+const FlowWorkspace = lazy(() => import('../workspace/FlowWorkspace'), 'FlowWorkspace');
+const RunTimeline = lazy(() => import('@/features/replay/RunTimeline'), 'RunTimeline');
+const DocumentViewer = lazy(() => import('../rag/DocumentViewer'), 'DocumentViewer');
+const DocumentAssistant = lazy(() => import('../rag/DocumentAssistant'), 'DocumentAssistant');
+const NotesEditor = lazy(() => import('../notes/NotesEditor'), 'NotesEditor');
+const InboxPanel = lazy(() => import('../inbox/InboxPanel'), 'InboxPanel');
+const CanvasHost = React.lazy(() => import('@/features/canvas/CanvasHost'));
+const SettingsPage = lazy(() => import('../settings/SettingsPage'), 'SettingsPage');
+const RemMeProfileView = lazy(() => import('../remme/RemmeProfileView'), 'RemMeProfileView');
+const KnowledgeGraphExplorer = lazy(() => import('../graph/KnowledgeGraphExplorer'), 'KnowledgeGraphExplorer');
+const ElectronBrowserView = lazy(() => import('@/features/news/components/ElectronBrowserView'), 'ElectronBrowserView');
+const NewsInspector = lazy(() => import('@/features/news/components/NewsInspector'), 'NewsInspector');
+const IdeLayout = lazy(() => import('@/features/ide/components/IdeLayout'), 'IdeLayout');
+const SchedulerDashboard = lazy(() => import('@/features/scheduler/components/SchedulerDashboard'), 'SchedulerDashboard');
+const MissionControl = lazy(() => import('@/features/console/components/MissionControl'), 'MissionControl');
+const SkillsDashboard = lazy(() => import('@/features/skills/components/SkillsDashboard'), 'SkillsDashboard');
+const ForgeDashboard = lazy(() => import('@/features/forge/components/ForgeDashboard'), 'ForgeDashboard');
+const AdminDashboard = lazy(() => import('@/features/admin/AdminDashboard'), 'AdminDashboard');
+const SwarmGraphView = lazy(() => import('@/features/swarm/SwarmGraphView'), 'SwarmGraphView');
+const AgentPeekPanel = lazy(() => import('@/features/swarm/AgentPeekPanel'), 'AgentPeekPanel');
+const WorkspacePanel = lazy(() => import('../workspace/WorkspacePanel'), 'WorkspacePanel');
+const EchoGuide = lazy(() => import('@/features/echo/EchoGuide'), 'EchoGuide');
+
+// ── Loading fallback ─────────────────────────────────────────────────────────
+const TabLoader = () => (
+    <div className="flex-1 flex items-center justify-center h-full text-muted-foreground">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        <span className="text-sm">Loading...</span>
+    </div>
+);
+
+// ── Resize Handle ────────────────────────────────────────────────────────────
 
 interface ResizeHandleProps {
     onMouseDown: (e: React.MouseEvent) => void;
@@ -22,57 +55,32 @@ interface ResizeHandleProps {
 
 const ResizeHandle: React.FC<ResizeHandleProps> = ({ onMouseDown }) => (
     <div
-        className="w-1 cursor-col-resize group relative flex items-center justify-center hover:bg-primary/30 active:bg-primary/50 transition-colors"
+        className="relative w-px bg-border hover:bg-primary/40 active:bg-primary cursor-col-resize transition-colors duration-150"
         onMouseDown={onMouseDown}
     >
-        <div className="absolute z-10 flex items-center justify-center w-4 h-8 rounded bg-muted border border-border opacity-0 group-hover:opacity-100 transition-opacity">
-            <GripVertical className="w-3 h-3 text-muted-foreground" />
-        </div>
+        <div className="absolute inset-y-0 -left-1.5 -right-1.5 z-10" />
     </div>
 );
 
-import { AppGrid } from '@/features/apps/components/AppGrid';
-import { AppInspector } from '@/features/apps/components/AppInspector';
-import { McpBrowser } from '../mcp/McpBrowser';
-import { McpInspector } from '../mcp/McpInspector';
-import { SettingsPage } from '../settings/SettingsPage';
-import { RemMeProfileView } from '../remme/RemmeProfileView';
-import { KnowledgeGraphExplorer } from '../graph/KnowledgeGraphExplorer';
-import { NewsList } from '@/features/news/components/NewsList';
-import { ElectronBrowserView } from '@/features/news/components/ElectronBrowserView';
-import { NewsInspector } from '@/features/news/components/NewsInspector';
-import { IdeLayout } from '@/features/ide/components/IdeLayout';
-import { SchedulerDashboard } from '@/features/scheduler/components/SchedulerDashboard';
-import { MissionControl } from '@/features/console/components/MissionControl';
-import { SkillsDashboard } from '@/features/skills/components/SkillsDashboard';
-import { ForgeDashboard } from '@/features/forge/components/ForgeDashboard';
-import { AdminDashboard } from '@/features/admin/AdminDashboard';
-import { SwarmGraphView } from '@/features/swarm/SwarmGraphView';
-import { AgentPeekPanel } from '@/features/swarm/AgentPeekPanel';
-import { useSwarmStore } from '@/features/swarm/useSwarmStore';
-import { CanvasInspector } from '../sidebar/CanvasInspector';
+const CanvasInspector = lazy(() => import('../sidebar/CanvasInspector'), 'CanvasInspector');
+
+// ── Main Layout ──────────────────────────────────────────────────────────────
 
 export const AppLayout: React.FC = () => {
-    // Mount useVoice at the root so wake-word events trigger the Echo tab
-    // switch regardless of which tab the user currently has open.
-    // This is the ONLY place useVoice should be mounted.
     useVoice();
 
     const {
-        viewMode, sidebarTab, isAppViewMode, newsTabs, showNewsChatPanel,
+        sidebarTab, isAppViewMode, showNewsChatPanel,
         selectedNodeId, selectedAppCardId, selectedExplorerNodeId,
-        ragActiveDocumentId, notesActiveDocumentId, ideActiveDocumentId,
-        selectedMcpServer, selectedLibraryComponent, clearSelection, showRagInsights,
+        notesActiveDocumentId,
+        selectedLibraryComponent, clearSelection, showRagInsights,
         isZenMode, isInboxOpen, setIsInboxOpen,
-        isSidebarSubPanelOpen,
+        isSidebarSubPanelOpen, isSidebarExpanded,
         startEventStream, stopEventStream, currentRun,
         activeSurfaceId, selectedCanvasWidgetId
-
     } = useAppStore();
 
-    // ── Always-on SSE connection ──────────────────────────────────────────────
-    // Must be active at the root level so voice wake / state events are received
-    // on ALL tabs, not just when Console (MissionControl) is open.
+    // SSE connection — always active
     useEffect(() => {
         startEventStream();
         return () => stopEventStream();
@@ -80,27 +88,27 @@ export const AppLayout: React.FC = () => {
 
     const selectedAgentId = useSwarmStore(s => s.selectedAgentId);
 
-    // Moved isInspectorOpen definition down to include new tabs context
-
+    // Inspector visibility logic
     const isInspectorOpen = React.useMemo(() => {
         if (sidebarTab === 'apps' && selectedAppCardId) return true;
         if (sidebarTab === 'runs' && selectedNodeId) return true;
         if (sidebarTab === 'explorer' && selectedExplorerNodeId) return true;
         if (sidebarTab === 'rag' && showRagInsights) return true;
-        if (sidebarTab === 'mcp' && selectedMcpServer) return true;
         if (sidebarTab === 'news' && showNewsChatPanel) return true;
         if (sidebarTab === 'echo' && currentRun) return true;
         if (sidebarTab === 'swarm' && !!selectedAgentId) return true;
         if (sidebarTab === 'canvas' && selectedCanvasWidgetId) return true;
         return false;
-    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedMcpServer, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId, selectedCanvasWidgetId]);
+    }, [sidebarTab, selectedNodeId, selectedAppCardId, selectedExplorerNodeId, showRagInsights, selectedLibraryComponent, showNewsChatPanel, currentRun, selectedAgentId, selectedCanvasWidgetId]);
 
-    // Scheduler and Console take up full width, no sidebar subpanel needed
-    // Echo should NOT be hidden when inspector is open, because the conversation is the primary surface.
-    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo') || sidebarTab === 'ide' || sidebarTab === 'scheduler' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
+    // Sidebar sub-panel visibility
+    const hideSidebarSubPanel = (isInspectorOpen && sidebarTab !== 'echo' && sidebarTab !== 'canvas') || sidebarTab === 'ide' || sidebarTab === 'console' || sidebarTab === 'skills' || sidebarTab === 'studio' || sidebarTab === 'admin' || !isSidebarSubPanelOpen;
 
-    const [leftWidth, setLeftWidth] = useState(400);
-    const [rightWidth, setRightWidth] = useState(250); // total 45% reduction from original 450px
+    // Panel sizing — leftWidth is the total width of rail + sub-panel combined.
+    // With expanded rail (200px) + sub-panel, we need ~520px default.
+    // With collapsed rail (52px) + sub-panel, sub-panel gets ~468px — spacious.
+    const [leftWidth, setLeftWidth] = useState(520);
+    const [rightWidth, setRightWidth] = useState(450);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDraggingRef = useRef<'left' | 'right' | null>(null);
@@ -114,38 +122,32 @@ export const AppLayout: React.FC = () => {
         startWidthRef.current = side === 'left' ? leftWidth : rightWidth;
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
-
-        // Add a class to body to indicate resizing state if needed
         document.body.classList.add('is-resizing');
     }, [leftWidth, rightWidth]);
 
+    // Escape to clear selection
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                // MCP should be persistent as per user request
-                if (sidebarTab !== 'mcp') {
-                    clearSelection();
-                }
+            if (e.key === 'Escape') clearSelection();
+            // Cmd+. to toggle inspector
+            if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+                e.preventDefault();
+                clearSelection();
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [clearSelection]);
 
+    // Drag resize handling
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDraggingRef.current) return;
-
             const delta = e.clientX - startXRef.current;
-
             if (isDraggingRef.current === 'left') {
-                const newWidth = Math.max(150, Math.min(600, startWidthRef.current + delta));
-                setLeftWidth(newWidth);
+                setLeftWidth(Math.max(200, Math.min(700, startWidthRef.current + delta)));
             } else {
-                // For right panel, dragging left increases width
-                const newWidth = Math.max(250, Math.min(800, startWidthRef.current - delta));
-                setRightWidth(newWidth);
+                setRightWidth(Math.max(250, Math.min(800, startWidthRef.current - delta)));
             }
         };
 
@@ -158,14 +160,13 @@ export const AppLayout: React.FC = () => {
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
     }, []);
 
-    // Initial RAG indexing status check
+    // RAG indexing status check
     useEffect(() => {
         const checkRagStatus = async () => {
             try {
@@ -181,32 +182,37 @@ export const AppLayout: React.FC = () => {
         checkRagStatus();
     }, []);
 
+    // Track previous tab for content transitions
+    const [prevTab, setPrevTab] = React.useState(sidebarTab);
+    const [contentKey, setContentKey] = React.useState(0);
+    React.useEffect(() => {
+        if (sidebarTab !== prevTab) {
+            setPrevTab(sidebarTab);
+            setContentKey(k => k + 1);
+        }
+    }, [sidebarTab, prevTab]);
+
+    // Calculate sidebar rail width based on expanded state
+    const sidebarRailWidth = isSidebarExpanded ? 200 : 52;
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans animate-gradient-bg relative">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <Meteors number={35} />
-            </div>
-
-
-            {/* Hide header when in App View Mode */}
+        <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
             {!isAppViewMode && <Header />}
 
             {/* Inbox Overlay */}
             {isInboxOpen && (
-                <InboxPanel onClose={() => setIsInboxOpen(false)} />
+                <Suspense fallback={<TabLoader />}>
+                    <InboxPanel onClose={() => setIsInboxOpen(false)} />
+                </Suspense>
             )}
 
-            <div ref={containerRef} className="flex-1 flex overflow-hidden p-3 gap-3 relative z-20">
-                {/* Left Sidebar: Run Library - Hidden in fullscreen mode for Apps OR when in App View Mode OR when news chat is shown OR Zen Mode */}
+            <div ref={containerRef} className="flex-1 flex overflow-hidden relative z-20 gap-0">
+                {/* Left Sidebar */}
                 {!(isFullScreen && sidebarTab === 'apps') && !isAppViewMode && !(sidebarTab === 'news' && showNewsChatPanel) && !isZenMode && (
                     <>
                         <div
-                            className={cn(
-                                "h-full glass-panel rounded-2xl flex-shrink-0 overflow-hidden flex flex-col shadow-2xl transition-all duration-300 ease-out",
-                                hideSidebarSubPanel ? "w-16" : ""
-                            )}
-                            style={{ width: hideSidebarSubPanel ? 64 : leftWidth }}
+                            className="h-full bg-sidebar flex-shrink-0 overflow-hidden flex flex-col transition-all duration-300 ease-out"
+                            style={{ width: hideSidebarSubPanel ? sidebarRailWidth : leftWidth }}
                         >
                             <Sidebar hideSubPanel={hideSidebarSubPanel} />
                         </div>
@@ -215,10 +221,9 @@ export const AppLayout: React.FC = () => {
                     </>
                 )}
 
-                {/* Center Canvas or Document Viewer - Main visual area */}
-                <div className="flex-1 flex flex-col min-w-0 glass-panel rounded-2xl relative overflow-hidden shadow-2xl transition-all duration-300">
-                    {/* Content Logic */}
-                    {/* Content Logic */}
+                {/* Center Content */}
+                <div className="flex-1 flex flex-col min-w-0 bg-background relative overflow-hidden">
+                  <Suspense fallback={<TabLoader />}>
                     {!isAppViewMode && (
                         <>
                             {/* Persistent App Grid */}
@@ -231,83 +236,79 @@ export const AppLayout: React.FC = () => {
                                 <ElectronBrowserView />
                             </div>
 
-                            {/* Transient Views */}
+                            {/* Dynamic Views — with content transition */}
                             {sidebarTab !== 'apps' && sidebarTab !== 'news' && (
-                                sidebarTab === 'mcp' ? (
-                                    <McpBrowser />
-                                ) : sidebarTab === 'settings' ? (
-                                    <SettingsPage />
-                                ) : sidebarTab === 'rag' ? (
-                                    <DocumentViewer />
-                                ) : sidebarTab === 'notes' ? (
-                                    /* If it's a binary file, show DocumentViewer, else show Editor */
-                                    notesActiveDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp|docx?|json)$/i.test(notesActiveDocumentId)
-                                        ? <DocumentViewer context="notes" />
-                                        : <NotesEditor />
-                                ) : sidebarTab === 'remme' ? (
-                                    <RemMeProfileView />
-                                ) : sidebarTab === 'graph' ? (
-                                    <KnowledgeGraphExplorer />
-                                ) : sidebarTab === 'explorer' ? (
-                                    <FlowWorkspace />
-                                ) : sidebarTab === 'ide' ? (
-                                    <IdeLayout />
-                                ) : sidebarTab === 'scheduler' ? (
-                                    <SchedulerDashboard />
-                                ) : sidebarTab === 'skills' ? (
-                                    <SkillsDashboard />
-                                ) : sidebarTab === 'studio' ? (
-                                    <ForgeDashboard />
-                                ) : sidebarTab === 'console' ? (
-                                    <MissionControl />
-                                ) : sidebarTab === 'admin' ? (
-                                    <AdminDashboard />
-                                ) : sidebarTab === 'echo' ? (
-                                    <>
-                                        <GraphCanvas />
-                                        <RunTimeline />
-                                    </>
-                                ) : sidebarTab === 'canvas' ? (
-                                    <CanvasHost surfaceId={activeSurfaceId} />
-                                ) : sidebarTab === 'swarm' ? (
-                                    <SwarmGraphView />
-                                ) : (
-                                    <>
-                                        <GraphCanvas />
-                                        <RunTimeline />
-                                    </>
-                                )
+                                <div key={contentKey} className="w-full h-full animate-content-in">
+                                    {sidebarTab === 'settings' ? (
+                                        <SettingsPage />
+                                    ) : sidebarTab === 'rag' ? (
+                                        <DocumentViewer />
+                                    ) : sidebarTab === 'notes' ? (
+                                        notesActiveDocumentId && /\.(pdf|png|jpg|jpeg|gif|webp|docx?|json)$/i.test(notesActiveDocumentId)
+                                            ? <DocumentViewer context="notes" />
+                                            : <NotesEditor />
+                                    ) : sidebarTab === 'remme' ? (
+                                        <RemMeProfileView />
+                                    ) : sidebarTab === 'graph' ? (
+                                        <KnowledgeGraphExplorer />
+                                    ) : sidebarTab === 'explorer' ? (
+                                        <FlowWorkspace />
+                                    ) : sidebarTab === 'ide' ? (
+                                        <IdeLayout />
+                                    ) : sidebarTab === 'scheduler' ? (
+                                        <SchedulerDashboard />
+                                    ) : sidebarTab === 'skills' ? (
+                                        <SkillsDashboard />
+                                    ) : sidebarTab === 'studio' ? (
+                                        <ForgeDashboard />
+                                    ) : sidebarTab === 'console' ? (
+                                        <MissionControl />
+                                    ) : sidebarTab === 'admin' ? (
+                                        <AdminDashboard />
+                                    ) : sidebarTab === 'echo' ? (
+                                        <EchoGuide />
+                                    ) : sidebarTab === 'canvas' ? (
+                                        <CanvasHost surfaceId={activeSurfaceId} />
+                                    ) : sidebarTab === 'swarm' ? (
+                                        <SwarmGraphView />
+                                    ) : (
+                                        <>
+                                            <GraphCanvas />
+                                            <RunTimeline />
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </>
                     )}
 
-                    {/* APP RUNTIME VIEW (When "View App" is clicked) */}
+                    {/* App runtime view */}
                     {isAppViewMode && (
-                        <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center">
+                        <div className="absolute inset-0 z-50 bg-background flex items-center justify-center">
                             <div className="w-full h-full p-4">
                                 <AppGrid isFullScreen={true} onToggleFullScreen={() => { }} />
                             </div>
                         </div>
                     )}
+                  </Suspense>
                 </div>
 
-                {/* Right panel - only show when something is selected or chat is active */}
+                {/* Right Inspector Panel — slides in */}
                 {isInspectorOpen && !isFullScreen && !isAppViewMode && (
                     <>
                         <ResizeHandle onMouseDown={handleMouseDown('right')} />
-
-                        {/* Right Workspace Panel - Floating Glass */}
                         <div
-                            className="h-full glass-panel rounded-2xl flex-shrink-0 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 ease-out"
+                            className="h-full bg-card border-l border-border flex-shrink-0 flex flex-col overflow-hidden animate-panel-in-right"
                             style={{ width: rightWidth }}
                         >
-                            {sidebarTab === 'apps' ? <AppInspector /> :
-                                sidebarTab === 'mcp' ? <McpInspector /> :
+                            <Suspense fallback={<TabLoader />}>
+                                {sidebarTab === 'apps' ? <AppInspector /> :
                                     sidebarTab === 'news' ? <NewsInspector /> :
                                         sidebarTab === 'swarm' ? <AgentPeekPanel /> :
                                         sidebarTab === 'canvas' ? <CanvasInspector /> :
                                             (sidebarTab === 'rag' || sidebarTab === 'notes') ? <DocumentAssistant context={sidebarTab as 'rag' | 'notes'} /> :
                                                 <WorkspacePanel />}
+                            </Suspense>
                         </div>
                     </>
                 )}

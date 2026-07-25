@@ -17,16 +17,7 @@ import permissions from '@/config/agent_permissions.json'; // Direct import assu
 import { checkContentSafety, checkPathSafety, getContentTypeFromPath, BLOCKED_PATTERNS } from '@/config/blocked_patterns';
 import { PermissionDialog } from '@/components/dialogs/PermissionDialog';
 import { usePermissionDialog, determineRiskLevel } from '@/hooks/usePermissionDialog';
-
-// --- Gemini Models (Shared with Settings) ---
-const GEMINI_MODELS = [
-    { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash', description: 'Latest, fast (Dec 2025)' },
-    { value: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro', description: 'Best multimodal (Nov 2025)' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, grounded' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced reasoning' },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Low cost' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
-];
+import { GEMINI_MODELS_FALLBACK, type GeminiModel } from '@/lib/gemini-models';
 
 // --- Reused Components (To be extracted later) ---
 
@@ -84,7 +75,7 @@ const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, id
                         theme === 'dark' ? "text-muted-foreground" : "text-slate-500"
                     )} />
                     <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest",
+                        "text-xs font-bold uppercase tracking-wide",
                         theme === 'dark' ? "text-muted-foreground/80" : "text-slate-600"
                     )}>{match[1]}</span>
                 </div>
@@ -100,7 +91,7 @@ const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, id
                                 title="Insert into active file"
                             >
                                 <ArrowRightToLine className="w-3.5 h-3.5" />
-                                <span className="text-[9px] font-bold">INSERT</span>
+                                <span className="text-2xs font-bold">INSERT</span>
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleCopy(); }}
@@ -111,7 +102,7 @@ const CodeBlock = ({ inline, className, children, theme, ideActiveDocumentId, id
                                 title="Copy to clipboard"
                             >
                                 {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                                <span className="text-[9px] font-bold">{copied ? 'COPIED' : 'COPY'}</span>
+                                <span className="text-2xs font-bold">{copied ? 'COPIED' : 'COPY'}</span>
                             </button>
                         </div>
                     )}
@@ -176,7 +167,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                             tr.name === 'run_command' ? "bg-green-500 animate-pulse" : "bg-primary"
                                         )} />
                                         <span className={cn(
-                                            "text-[9px] font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]",
+                                            "text-2xs font-bold uppercase tracking-wider opacity-70 truncate max-w-[150px]",
                                             theme === 'dark' ? "text-muted-foreground" : "text-slate-600"
                                         )}>
                                             {tr.name.replace(/_/g, ' ')}
@@ -184,7 +175,7 @@ const MessageContent: React.FC<{ content: string, role: 'user' | 'assistant' | '
                                     </div>
                                     <div className="flex items-center shrink-0">
                                         <span className={cn(
-                                            "text-[8px] font-mono tracking-tighter opacity-40",
+                                            "text-[8px] font-mono tracking-tight opacity-40",
                                             theme === 'dark' ? "text-muted-foreground" : "text-slate-500"
                                         )}>AGENT TOOL OUTPUT</span>
                                     </div>
@@ -290,7 +281,7 @@ const FilePill: React.FC<{ file: FileContext; onRemove?: () => void }> = ({ file
                     type: file.name.split('.').pop() || 'txt'
                 });
             }}
-            className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-accent/30 text-foreground text-[10px] font-medium rounded-md border border-border/50 cursor-pointer hover:bg-accent/50 transition-all select-none mb-1 shadow-sm"
+            className="group flex items-center gap-1.5 px-2.5 py-1.5 bg-accent/30 text-foreground text-xs font-medium rounded-md border border-border/50 cursor-pointer hover:bg-accent/50 transition-all select-none mb-1 shadow-sm"
         >
             {getIcon()}
             <span className="truncate max-w-[140px]">{file.name}</span>
@@ -330,15 +321,15 @@ const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
 
                 {metadata ? (
                     <div className="flex flex-col min-w-0 flex-1">
-                        <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                        <span className={cn("font-semibold truncate text-xs", isExpanded && "whitespace-normal")}>
                             {metadata.file?.split('/').pop()} <span className="opacity-60 font-normal">:{metadata.range?.startLine}-{metadata.range?.endLine}</span>
                         </span>
-                        <span className={cn("truncate text-[9px] opacity-70 font-mono", isExpanded && "whitespace-normal")}>
+                        <span className={cn("truncate text-2xs opacity-70 font-mono", isExpanded && "whitespace-normal")}>
                             {label}
                         </span>
                     </div>
                 ) : (
-                    <span className={cn("font-semibold truncate text-[10px]", isExpanded && "whitespace-normal")}>
+                    <span className={cn("font-semibold truncate text-xs", isExpanded && "whitespace-normal")}>
                         {label}
                     </span>
                 )}
@@ -353,7 +344,7 @@ const ContextPill: React.FC<{ item: ContextItem | string }> = ({ item }) => {
                 <div className={cn(
                     "mt-1 w-full font-mono p-2.5 rounded border whitespace-pre-wrap break-words text-[11px] leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200",
                     theme === 'dark'
-                        ? "bg-black/40 text-foreground/90 border-white/10"
+                        ? "bg-black/40 text-foreground/90 border-border"
                         : "bg-white text-slate-800 border-blue-100 shadow-inner"
                 )}>
                     {content}
@@ -392,6 +383,18 @@ export const IdeAgentPanel: React.FC = () => {
     const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
     const [copiedImage, setCopiedImage] = useState(false);
     const thinkingRef = useRef(false);
+    const [geminiModels, setGeminiModels] = useState<GeminiModel[]>(GEMINI_MODELS_FALLBACK);
+
+    // Fetch available Gemini models on mount (falls back to GEMINI_MODELS_FALLBACK)
+    useEffect(() => {
+        axios.get(`${API_BASE}/settings/gemini/models`)
+            .then(res => {
+                if (res.data.status === 'success' && res.data.models?.length > 0) {
+                    setGeminiModels(res.data.models);
+                }
+            })
+            .catch(() => {}); // keep fallback
+    }, []);
 
     // Permission dialog hook for agent operations
     // Review State from Global Store
@@ -580,7 +583,8 @@ export const IdeAgentPanel: React.FC = () => {
     // Full Implementation of executeTool needed to work
     // I will overwrite `executeTool` above with the COMPLETE one in the actual file write.
 
-    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[], fileContexts?: { name: string, path: string }[]) => {
+    const MAX_TOOL_DEPTH = 10;
+    const callAgent = async (currentHistory: any[], userMessage: string | null, images?: string[], currentContexts?: ContextItem[], fileContexts?: { name: string, path: string }[], depth: number = 0) => {
         if (!explorerRootPath) return;
         setIsThinking(true);
         thinkingRef.current = true;
@@ -623,11 +627,23 @@ export const IdeAgentPanel: React.FC = () => {
             }
 
             if (fileContexts && fileContexts.length > 0) {
-                const fileStr = fileContexts.map(f =>
-                    `\n\n> Active File Context (User Selected): [${f.name}](${f.path})\n` +
-                    `> Note: This is the primary file for the current request. Please read it using read_file if needed (though it should be provided in context if small enough, currently we just point to it).`
-                ).join('');
-                currentContextStr += fileStr;
+                for (const f of fileContexts) {
+                    const fullPath = f.path.startsWith('/') ? f.path : `${explorerRootPath}/${f.path}`;
+                    try {
+                        const res = await window.electronAPI?.invoke('fs:readFile', fullPath);
+                        if (res?.success && res.content) {
+                            const content = res.content.length > 8000
+                                ? res.content.substring(0, 8000) + '\n... (truncated, use read_file for full content)'
+                                : res.content;
+                            const lang = f.name.split('.').pop() || '';
+                            currentContextStr += `\n\n> File Context: ${f.name} (${f.path})\n\`\`\`${lang}\n${content}\n\`\`\``;
+                        } else {
+                            currentContextStr += `\n\n> File Context: [${f.name}](${f.path}) — could not read, use read_file tool.`;
+                        }
+                    } catch {
+                        currentContextStr += `\n\n> File Context: [${f.name}](${f.path}) — could not read, use read_file tool.`;
+                    }
+                }
             }
 
             const payload = {
@@ -685,27 +701,37 @@ export const IdeAgentPanel: React.FC = () => {
             const toolCalls = parseToolCalls(accumulatedContent);
 
             // Check if parsing might have failed (response looks like a tool call but nothing parsed)
-            const looksLikeToolCall = accumulatedContent.includes('```') &&
-                (accumulatedContent.includes('"tool"') || accumulatedContent.includes('"name"'));
+            const looksLikeToolCall = (accumulatedContent.includes('```') &&
+                (accumulatedContent.includes('"tool"') || accumulatedContent.includes('"name"'))) ||
+                /<(?:read_file|write_file|list_dir|run_command|find_by_name|grep_search)[\s>]/.test(accumulatedContent);
 
             if (toolCalls.length > 0 && thinkingRef.current) {
-                let toolOutputs = "";
-                for (const call of toolCalls) {
-                    if (!thinkingRef.current) break;
-                    // We need the FULL executeTool here. I'll ensure I copy the full helper from DocAssistant.
-                    const result = await executeTool(call, explorerRootPath);
-                    toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
-                }
+                if (depth >= MAX_TOOL_DEPTH) {
+                    useAppStore.getState().updateMessageContent(
+                        explorerRootPath, botMsgId,
+                        accumulatedContent + '\n\n---\n⚠️ **Tool limit reached** — stopped after ' + MAX_TOOL_DEPTH + ' iterations to prevent runaway loops.'
+                    );
+                } else {
+                    let toolOutputs = "";
+                    for (const call of toolCalls) {
+                        if (!thinkingRef.current) break;
+                        const result = await executeTool(call, explorerRootPath);
+                        toolOutputs += `\n\n> Tool Output (${call.name}):\n\`\`\`\n${result}\n\`\`\`\n`;
+                    }
 
-                if (thinkingRef.current) {
-                    const toolMsg = {
-                        id: Date.now().toString(),
-                        role: 'user' as const,
-                        content: `[System Tool Output]:${toolOutputs}`,
-                        timestamp: Date.now()
-                    };
-                    addMessageToDocChat(explorerRootPath, toolMsg);
-                    await callAgent([...currentHistory, { role: 'assistant', content: accumulatedContent }, { role: 'user', content: toolMsg.content }], null);
+                    if (thinkingRef.current) {
+                        const toolMsg = {
+                            id: Date.now().toString(),
+                            role: 'user' as const,
+                            content: `[System Tool Output]:${toolOutputs}`,
+                            timestamp: Date.now()
+                        };
+                        addMessageToDocChat(explorerRootPath, toolMsg);
+                        await callAgent(
+                            [...currentHistory, { role: 'assistant', content: accumulatedContent }, { role: 'user', content: toolMsg.content }],
+                            null, images, currentContexts, fileContexts, depth + 1
+                        );
+                    }
                 }
             } else if (looksLikeToolCall && toolCalls.length === 0) {
                 // Parsing failed - notify the user
@@ -769,7 +795,7 @@ export const IdeAgentPanel: React.FC = () => {
                 {/* Full Panel Drop Overlay */}
                 {isDragging && (
                     <div className="absolute inset-0 z-[100] bg-primary/5 backdrop-blur-[2px] border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center justify-center p-8 pointer-events-none animate-in fade-in duration-200">
-                        <div className="bg-background/80 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border border-primary/20 scale-110">
+                        <div className="bg-background/80 p-6 rounded-2xl shadow-sm flex flex-col items-center gap-4 border border-primary/20 scale-110">
                             <div className="p-4 bg-primary/10 rounded-full">
                                 <Plus className="w-8 h-8 text-primary animate-bounce" />
                             </div>
@@ -779,10 +805,10 @@ export const IdeAgentPanel: React.FC = () => {
                 )}
 
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-border bg-white/95 dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
+                <div className="px-4 py-3 border-b border-border bg-accent dark:bg-card/95 backdrop-blur z-10 flex items-center justify-between">
                     <div className="flex items-center gap-3 overflow-hidden">
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">IDE Agent</span>
+                            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">IDE Agent</span>
                             <span className="text-xs font-medium truncate text-foreground">
                                 {explorerRootPath?.split('/').pop() || 'No Project'}
                             </span>
@@ -814,7 +840,7 @@ export const IdeAgentPanel: React.FC = () => {
 
                             {isHistoryOpen && (
                                 <div className="absolute top-full right-0 mt-2 w-64 bg-background border border-border shadow-xl rounded-lg z-50 p-2 max-h-60 overflow-y-auto">
-                                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1 mb-1">Previous Chats</p>
+                                    <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wide px-2 py-1 mb-1">Previous Chats</p>
                                     {chatSessions.length === 0 ? (
                                         <p className="text-xs text-muted-foreground px-2 py-4 text-center italic">No history yet</p>
                                     ) : (
@@ -832,7 +858,7 @@ export const IdeAgentPanel: React.FC = () => {
                                             >
                                                 <div className="truncate flex-1 pr-2">
                                                     <span className="block truncate font-medium">{session.title}</span>
-                                                    <span className="block text-[9px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                    <span className="block text-2xs text-muted-foreground flex items-center gap-1 mt-0.5">
                                                         <Clock className="w-2 h-2" />
                                                         {new Date(session.updated_at * 1000).toLocaleDateString()}
                                                     </span>
@@ -916,7 +942,7 @@ export const IdeAgentPanel: React.FC = () => {
                             {/* Message Header (Role Name) */}
                             {msg.role === 'assistant' && (
                                 <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">RESPONSE</span>
+                                    <span className="text-xs font-bold uppercase tracking-wide">RESPONSE</span>
                                 </div>
                             )}
 
@@ -950,7 +976,7 @@ export const IdeAgentPanel: React.FC = () => {
                                 msg.role === 'user'
                                     ? ((msg.content && msg.content.includes && msg.content.includes('[System Tool Output]'))
                                         ? "w-full"
-                                        : "bg-white/10 dark:bg-white/5 border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
+                                        : "bg-accent dark:bg-accent border border-border/50 text-foreground rounded-lg shadow-sm leading-normal backdrop-blur-sm")
                                     : "text-foreground leading-relaxed"
                             )}>
                                 <MessageContent content={msg.content} role={msg.role as any} />
@@ -961,7 +987,7 @@ export const IdeAgentPanel: React.FC = () => {
                     {isThinking && (
                         <div className="flex flex-col w-full mb-4">
                             <div className="flex items-center gap-2 mb-1.5 px-1 opacity-60">
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Assistant</span>
+                                <span className="text-xs font-bold uppercase tracking-wide">Assistant</span>
                             </div>
                             <div className="pl-1 text-sm text-foreground">
                                 <span className="flex items-center gap-2 text-muted-foreground italic text-xs">
@@ -981,7 +1007,7 @@ export const IdeAgentPanel: React.FC = () => {
                             {selectedContexts.map((ctx, i) => {
                                 const text = typeof ctx === 'string' ? ctx : ctx.text;
                                 return (
-                                    <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-[10px] font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                                    <div key={`text-${i}`} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-md max-w-full border border-primary/20 shadow-sm animate-in fade-in slide-in-from-bottom-1">
                                         <Quote className="w-3 h-3 shrink-0 opacity-70" />
                                         <span className="truncate max-w-[160px]">{text.substring(0, 40)}...</span>
                                         <button onClick={() => removeSelectedContext(i)} className="hover:text-primary/70 ml-1 transition-colors"><X className="w-3 h-3" /></button>
@@ -1038,7 +1064,7 @@ export const IdeAgentPanel: React.FC = () => {
                                     onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                                     disabled={isThinking}
                                     className={cn(
-                                        "flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-[10px] font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30",
+                                        "flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-background/50 text-xs font-medium text-muted-foreground transition-colors border border-transparent hover:border-border/30",
                                         isThinking ? "opacity-50 cursor-not-allowed" : ""
                                     )}
                                 >
@@ -1050,8 +1076,8 @@ export const IdeAgentPanel: React.FC = () => {
                                 {isModelMenuOpen && (
                                     <div className="absolute bottom-full left-0 mb-2 w-64 bg-popover border border-border shadow-xl rounded-lg z-50 overflow-hidden animate-in fade-in slide-in-from-bottom-1 p-1">
                                         <div className="max-h-[300px] overflow-y-auto">
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-1.5 border-b border-border/30 mb-1">Gemini Cloud</p>
-                                            {GEMINI_MODELS.map(m => (
+                                            <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wide px-2 py-1.5 border-b border-border/30 mb-1">Gemini Cloud</p>
+                                            {geminiModels.map(m => (
                                                 <button
                                                     key={m.value}
                                                     onClick={() => syncModelChange(m.value)}
@@ -1065,8 +1091,8 @@ export const IdeAgentPanel: React.FC = () => {
                                                 </button>
                                             ))}
 
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2 py-2 border-b border-border/30 my-1">Ollama Local</p>
-                                            {ollamaModels.length === 0 && <p className="px-2 py-2 text-[10px] text-muted-foreground italic">No local models found</p>}
+                                            <p className="text-2xs font-bold text-muted-foreground uppercase tracking-wide px-2 py-2 border-b border-border/30 my-1">Ollama Local</p>
+                                            {ollamaModels.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground italic">No local models found</p>}
                                             {ollamaModels.map(model => (
                                                 <button
                                                     key={model.name}
@@ -1117,7 +1143,7 @@ export const IdeAgentPanel: React.FC = () => {
                         >
                             <div className="absolute top-6 right-6 flex items-center gap-3">
                                 <button
-                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                    className="p-2 bg-black/40 hover:bg-accent text-white rounded-full transition-colors flex items-center gap-2 px-3"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (selectedImage) copyImageToClipboard(selectedImage);
@@ -1128,7 +1154,7 @@ export const IdeAgentPanel: React.FC = () => {
                                     <span className="text-xs font-bold">{copiedImage ? 'COPIED' : 'COPY'}</span>
                                 </button>
                                 <button
-                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors flex items-center gap-2 px-3"
+                                    className="p-2 bg-black/40 hover:bg-accent text-white rounded-full transition-colors flex items-center gap-2 px-3"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (!selectedImage) return;
@@ -1143,7 +1169,7 @@ export const IdeAgentPanel: React.FC = () => {
                                     <span className="text-xs font-bold">SAVE</span>
                                 </button>
                                 <button
-                                    className="p-2 bg-black/40 hover:bg-white/20 text-white rounded-full transition-colors"
+                                    className="p-2 bg-black/40 hover:bg-accent text-white rounded-full transition-colors"
                                     onClick={() => setSelectedImage(null)}
                                 >
                                     <X className="w-6 h-6" />
@@ -1153,7 +1179,7 @@ export const IdeAgentPanel: React.FC = () => {
                                 <img
                                     src={selectedImage}
                                     alt="Zoomed"
-                                    className="max-w-full max-h-full rounded-lg shadow-2xl object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
+                                    className="max-w-full max-h-full rounded-lg shadow-sm object-contain animate-in zoom-in-95 duration-300 pointer-events-auto"
                                     onClick={(e) => e.stopPropagation()}
                                 />
                             )}

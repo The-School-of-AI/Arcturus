@@ -103,7 +103,7 @@ export const StatsTrendingCard: React.FC<StatsTrendingCardProps> = ({
                             <div className="flex flex-col">
                                 <span className="text-xs font-medium text-muted-foreground">{stat.name}</span>
                                 {stat.description && (
-                                    <span className="text-[10px] text-muted-foreground/70 mt-0.5 line-clamp-2">{stat.description}</span>
+                                    <span className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-2">{stat.description}</span>
                                 )}
                             </div>
                             {showChange && stat.change && (
@@ -197,7 +197,7 @@ export const StatsGridCard: React.FC<StatsGridCardProps> = ({
                                 <div>
                                     <dt className="text-xs font-medium text-muted-foreground mb-1">{item.name}</dt>
                                     {item.description && (
-                                        <p className="text-[10px] text-muted-foreground/70 mb-2 line-clamp-2">{item.description}</p>
+                                        <p className="text-xs text-muted-foreground/70 mb-2 line-clamp-2">{item.description}</p>
                                     )}
                                 </div>
                                 <dd className="flex items-baseline space-x-2 mt-auto">
@@ -575,7 +575,7 @@ export const Stats01Card: React.FC<Stats01CardProps> = ({
                             )}
                         </div>
                         {stat.value && <div className="text-2xl font-bold text-foreground mt-auto">{stat.value}</div>}
-                        {stat.description && <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{stat.description}</div>}
+                        {stat.description && <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{stat.description}</div>}
                     </div>
                 ))}
             </div>
@@ -1008,7 +1008,7 @@ export const PlanOverviewCard: React.FC<PlanOverviewCardProps> = ({ title, data 
                         </svg>
                         <div>
                             <div className="text-xs font-medium text-foreground">{p.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{p.current} of {p.allowed} used</div>
+                            <div className="text-xs text-muted-foreground">{p.current} of {p.allowed} used</div>
                         </div>
                     </div>
                 ))}

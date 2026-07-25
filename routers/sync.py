@@ -19,18 +19,38 @@ from memory.sync_config import is_sync_engine_enabled, get_sync_server_url
 
 router = APIRouter(prefix="/sync", tags=["Sync"])
 
+_USER_ID_FILE = Path(__file__).parent.parent / "memory" / "remme_index" / "user_id.json"
 
-async def run_sync_background() -> None:
+
+def _user_id_for_sync() -> str | None:
+    """User ID for background sync: request context, then persisted file (e.g. Electron desktop)."""
+    uid = get_current_user_id()
+    if uid:
+        return uid
+    if _USER_ID_FILE.exists():
+        try:
+            data = json.loads(_USER_ID_FILE.read_text())
+            return data.get("user_id") or None
+        except Exception:
+            pass
+    return None
+
+
+async def run_sync_background(user_id: str | None = None) -> None:
     """
     Run SyncEngine.sync() (push then pull) in a background thread.
     No-op if sync engine is disabled or SYNC_SERVER_URL not set.
     Used on app startup and after add_memory/create_space.
+    Pass user_id when called from a request handler so the background task has identity; else uses file/context.
     """
     if not is_sync_engine_enabled() or not get_sync_server_url():
         return
+    uid = user_id or _user_id_for_sync()
+    if not uid:
+        return
     try:
         from memory.sync.engine import get_sync_engine
-        engine = get_sync_engine()
+        engine = get_sync_engine(user_id=uid)
         if not engine:
             return
         # sync() is blocking (HTTP); run in thread to not block event loop

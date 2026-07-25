@@ -1,0 +1,21 @@
+# Bazaar Skill Manifest — prompt_only template
+name: {{ skill_name }}
+version: "1.0.0"
+description: "TODO: describe what {{ skill_name }} does"
+author: "{{ author }}"
+category: "productivity"
+permissions: []              # prompt-only skills need no special permissions
+dependencies: []
+skill_dependencies: []
+intent_triggers:
+  - "{{ skill_name }}"
+tools:
+  - name: run_{{ skill_name }}
+    description: "TODO: describe this tool"
+    module: "{{ skill_name }}.tools.main"
+    function: "run"
+    parameters:
+      text:
+        type: string
+        description: "The input text to transform"
+checksum: ""

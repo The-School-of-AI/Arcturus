@@ -28,6 +28,32 @@ except ImportError:
     BROWSER_USE_AVAILABLE = False
     sys.stderr.write("⚠️ browser-use not installed. Vision features will be disabled.\n")
 
+
+def _create_langchain_gemini_llm(model_name: str):
+    """Create a LangChain Gemini LLM using centralized settings (API key or Vertex AI)."""
+    try:
+        from config.gemini_client import _load_gemini_settings
+        cfg = _load_gemini_settings()
+    except Exception:
+        cfg = {}
+
+    mode = cfg.get("mode", "api_key")
+
+    if mode == "vertex_ai":
+        vertex = cfg.get("vertex_ai", {})
+        project = vertex.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT", "")
+        location = vertex.get("location", "us-central1")
+        try:
+            from langchain_google_vertexai import ChatVertexAI
+            return ChatVertexAI(model_name=model_name, project=project, location=location)
+        except ImportError:
+            print("⚠️ langchain_google_vertexai not installed, falling back to API key mode")
+
+    # Default: API key mode
+    api_key_env = cfg.get("api_key_env", "GEMINI_API_KEY")
+    api_key = os.getenv(api_key_env, "")
+    return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
+
 load_dotenv()
 
 # Initialize FastMCP server
@@ -221,9 +247,9 @@ async def browser_use_action(string: str, headless: bool = True) -> str:
                 print(f"🖥️ Browser Use: Using Ollama model {model_name}")
             except ImportError:
                 print("⚠️ langchain_ollama not installed, falling back to Gemini")
-                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=os.getenv("GEMINI_API_KEY"))
+                llm = _create_langchain_gemini_llm("gemini-2.5-flash")
         else:
-            llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=os.getenv("GEMINI_API_KEY"))
+            llm = _create_langchain_gemini_llm(model_name)
             print(f"☁️ Browser Use: Using Gemini model {model_name}")
         
         # Get shared browser

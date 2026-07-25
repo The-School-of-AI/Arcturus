@@ -1,6 +1,19 @@
 import React from 'react';
 import LineChartWidget from './widgets/LineChartWidget';
 import MonacoWidget from './widgets/MonacoWidget';
+import WhiteboardWidget from './widgets/WhiteboardWidget';
+import MapWidget from './widgets/MapWidget';
+import KanbanWidget from './widgets/KanbanWidget';
+import DataTableWidget from './widgets/DataTableWidget';
+import MarkdownWidget from './widgets/MarkdownWidget';
+import TerminalWidget from './widgets/TerminalWidget';
+import MetricCardWidget from './widgets/MetricCardWidget';
+import ImageViewerWidget from './widgets/ImageViewerWidget';
+import JSONViewerWidget from './widgets/JSONViewerWidget';
+import TodoListWidget from './widgets/TodoListWidget';
+import ProgressWidget from './widgets/ProgressWidget';
+import FlowChartWidget from './widgets/FlowChartWidget';
+import NetworkGraphWidget from './widgets/NetworkGraphWidget';
 import SandboxFrame from './SandboxFrame';
 
 const ButtonWidget = ({ text, onClick }: { text: string; onClick: () => void }) => (
@@ -20,10 +33,6 @@ const ContainerWidget = ({ children, className }: { children: React.ReactNode; c
     <div className={className}>{children}</div>
 );
 
-import WhiteboardWidget from './widgets/WhiteboardWidget';
-import MapWidget from './widgets/MapWidget';
-import KanbanWidget from './widgets/KanbanWidget';
-
 // Map of component discriminator to React component
 export const WidgetRegistry: Record<string, React.FC<any>> = {
     "Button": ButtonWidget,
@@ -34,6 +43,16 @@ export const WidgetRegistry: Record<string, React.FC<any>> = {
     "Whiteboard": WhiteboardWidget,
     "Map": MapWidget,
     "Kanban": KanbanWidget,
+    "DataTable": DataTableWidget,
+    "Markdown": MarkdownWidget,
+    "Terminal": TerminalWidget,
+    "MetricCard": MetricCardWidget,
+    "ImageViewer": ImageViewerWidget,
+    "JSONViewer": JSONViewerWidget,
+    "TodoList": TodoListWidget,
+    "Progress": ProgressWidget,
+    "FlowChart": FlowChartWidget,
+    "NetworkGraph": NetworkGraphWidget,
     "Sandbox": SandboxFrame,
 };
 

@@ -54,8 +54,8 @@ SLIDE_TYPE_ELEMENTS = {
     "team":        ["title", "body", "bullet_list"],
     "stat":        ["kicker", "title", "stat_callout", "body", "takeaway"],
     "section_divider": ["title", "subtitle"],
-    "agenda":      ["kicker", "title", "bullet_list"],
-    "table":       ["kicker", "title", "table_data", "source_citation", "takeaway"],
+    "agenda":      ["kicker", "title", "body", "bullet_list"],
+    "table":       ["kicker", "title", "table_data", "body", "source_citation", "takeaway"],
 }
 
 # Narrative arc pattern — varied with no consecutive repeats

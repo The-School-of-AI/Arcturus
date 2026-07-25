@@ -50,6 +50,16 @@ class EpisodicQdrantStore:
         api_key = get_qdrant_api_key()
         self.client = QdrantClient(url=url, api_key=api_key, timeout=10.0)
         self._ensure_collection()
+        self._is_named = self._check_is_named()
+
+    def _check_is_named(self) -> bool:
+        """Check if collection uses named vectors."""
+        try:
+            info = self.client.get_collection(self.collection_name)
+            v_config = getattr(info.config.params, "vectors_config", None)
+            return isinstance(v_config, dict)
+        except Exception:
+            return False
 
     def _ensure_collection(self) -> None:
         collections = self.client.get_collections()
@@ -112,10 +122,14 @@ class EpisodicQdrantStore:
             "original_query": original_query,
             "outcome": outcome,
             "skeleton_json": skeleton_json,
+            "skeleton_json": skeleton_json,
             "created_at": now,
             "updated_at": now,
+            "deleted": False,
+            "version": 1,
         }
-        point = PointStruct(id=point_id, vector=vec, payload=payload)
+        vec_data = {"default": vec} if self._is_named else vec
+        point = PointStruct(id=point_id, vector=vec_data, payload=payload)
         self.client.upsert(collection_name=self.collection_name, points=[point])
         log_step(f"💾 Episodic saved: {session_id[:12]}...", symbol="🧠")
         return point_id
@@ -156,8 +170,11 @@ class EpisodicQdrantStore:
                 "skeleton_json": skeleton_json,
                 "created_at": now,
                 "updated_at": now,
+                "deleted": False,
+                "version": 1,
             }
-            point = PointStruct(id=str(session_id), vector=vec, payload=payload)
+            vec_data = {"default": vec} if self._is_named else vec
+            point = PointStruct(id=str(session_id), vector=vec_data, payload=payload)
             self.client.upsert(collection_name=self.collection_name, points=[point])
             return True
         except Exception as e:
@@ -165,7 +182,34 @@ class EpisodicQdrantStore:
             return False
 
     def delete(self, session_id: str) -> bool:
-        """Delete episode by session_id."""
+        """Soft delete: set deleted=True."""
+        try:
+            # We need to retrieve it to get the vector for upsert
+            raw = self.client.retrieve(collection_name=self.collection_name, ids=[str(session_id)])
+            if not raw:
+                return False
+            payload = dict(raw[0].payload)
+            if payload.get("deleted") is True:
+                return True # already deleted
+            
+            payload["deleted"] = True
+            payload["updated_at"] = datetime.now().isoformat()
+            payload["version"] = payload.get("version", 1) + 1
+            
+            # Use set_payload instead of upsert to avoid re-sending vectors and potential "Not existing vector name" errors.
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[str(session_id)],
+                wait=True
+            )
+            return True
+        except Exception as e:
+            log_error(f"Episodic soft delete failed: {e}")
+            return False
+
+    def hard_delete(self, session_id: str) -> bool:
+        """Actually remove from Qdrant."""
         try:
             self.client.delete(
                 collection_name=self.collection_name,
@@ -173,7 +217,7 @@ class EpisodicQdrantStore:
             )
             return True
         except Exception as e:
-            log_error(f"Episodic delete failed: {e}")
+            log_error(f"Episodic hard delete failed: {e}")
             return False
 
     def search(
@@ -182,6 +226,7 @@ class EpisodicQdrantStore:
         limit: int = 10,
         user_id: Optional[str] = None,
         space_id: Optional[str] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         """Vector search with optional user_id and space_id filters."""
         user_id = user_id or get_user_id()
@@ -190,15 +235,21 @@ class EpisodicQdrantStore:
             conditions.append(FieldCondition(key=self._tenant_keyword_field, match=MatchValue(value=user_id)))
         if space_id is not None:
             conditions.append(FieldCondition(key="space_id", match=MatchValue(value=space_id)))
-        search_filter = Filter(must=conditions) if conditions else None
+        must_not = []
+        if not include_deleted:
+            must_not.append(FieldCondition(key="deleted", match=MatchValue(value=True)))
+        search_filter = Filter(must=conditions, must_not=must_not) if (conditions or must_not) else None
         vec = query_vector.tolist() if isinstance(query_vector, np.ndarray) else list(query_vector)
         try:
-            results = self.client.query_points(
+            kwargs = dict(
                 collection_name=self.collection_name,
                 query=vec,
                 limit=limit,
                 query_filter=search_filter,
             )
+            if self._is_named:
+                kwargs["using"] = "default"
+            results = self.client.query_points(**kwargs)
             out = []
             for r in (results.result if hasattr(results, "result") else results):
                 if hasattr(r, "id") and hasattr(r, "score") and hasattr(r, "payload"):
@@ -221,6 +272,7 @@ class EpisodicQdrantStore:
         limit: int = 10,
         user_id: Optional[str] = None,
         space_id: Optional[str] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         """Return recent episodes by scroll. Filters by user_id and optional space_id."""
         user_id = user_id or get_user_id()
@@ -229,7 +281,10 @@ class EpisodicQdrantStore:
             conditions.append(FieldCondition(key=self._tenant_keyword_field, match=MatchValue(value=user_id)))
         if space_id is not None:
             conditions.append(FieldCondition(key="space_id", match=MatchValue(value=space_id)))
-        scroll_filter = Filter(must=conditions) if conditions else None
+        must_not = []
+        if not include_deleted:
+            must_not.append(FieldCondition(key="deleted", match=MatchValue(value=True)))
+        scroll_filter = Filter(must=conditions, must_not=must_not) if (conditions or must_not) else None
         try:
             points, _ = self.client.scroll(
                 collection_name=self.collection_name,
@@ -257,13 +312,17 @@ class EpisodicQdrantStore:
         self,
         limit: Optional[int] = 10000,
         user_id: Optional[str] = None,
+        include_deleted: bool = False,
     ) -> List[Dict[str, Any]]:
         """Return all episodes for sync. Scopes by user_id."""
         user_id = user_id or get_user_id()
         conditions = []
         if self._is_tenant and user_id:
             conditions.append(FieldCondition(key=self._tenant_keyword_field, match=MatchValue(value=user_id)))
-        scroll_filter = Filter(must=conditions) if conditions else None
+        must_not = []
+        if not include_deleted:
+            must_not.append(FieldCondition(key="deleted", match=MatchValue(value=True)))
+        scroll_filter = Filter(must=conditions, must_not=must_not) if (conditions or must_not) else None
         try:
             out = []
             offset = None

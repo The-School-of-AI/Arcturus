@@ -1,0 +1,160 @@
+# .github/workflows/p09-bazaar-marketplace.yml
+#
+# Charter Condition 9: CI check p09-bazaar-marketplace must run:
+#   - project acceptance tests
+#   - project integration tests
+#   - baseline regression suite: scripts/test_all.sh quick
+#   - lint/typecheck for touched code paths
+
+name: p09-bazaar-marketplace
+
+on:
+  push:
+    paths:
+      - "marketplace/**"
+      - "tests/acceptance/p09_bazaar/**"
+      - "tests/integration/test_bazaar_skill_install_execution.py"
+      - "tests/unit/bazaar/**"
+      - "tests/sdk/**"
+  pull_request:
+    paths:
+      - "marketplace/**"
+      - "tests/acceptance/p09_bazaar/**"
+      - "tests/integration/test_bazaar_skill_install_execution.py"
+      - "tests/unit/bazaar/**"
+      - "tests/sdk/**"
+
+jobs:
+  acceptance:
+    name: P09 Acceptance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install --system -e ".[dev]"
+
+      - name: Run acceptance tests
+        run: |
+          pytest tests/acceptance/p09_bazaar/ -v --tb=short \
+            --junitxml=reports/acceptance.xml
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p09-acceptance-report
+          path: reports/acceptance.xml
+
+  integration:
+    name: P09 Integration Tests
+    runs-on: ubuntu-latest
+    needs: acceptance
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install --system -e ".[dev]"
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/test_bazaar_skill_install_execution.py -v \
+            --tb=short --junitxml=reports/integration.xml
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p09-integration-report
+          path: reports/integration.xml
+
+  baseline:
+    name: Baseline Regression
+    runs-on: ubuntu-latest
+    needs: acceptance
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install --system -e ".[dev]"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: platform-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: platform-frontend
+
+      - name: Run baseline regression suite
+        run: |
+          bash scripts/test_all.sh quick
+
+  lint:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libcairo2-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install --system -e ".[dev]"
+
+      - name: Lint marketplace code
+        run: |
+          python -m py_compile marketplace/version_manager.py
+          python -m py_compile marketplace/moderation.py
+          python -m py_compile marketplace/abuse.py
+          python -m py_compile marketplace/admin.py
+          python -m py_compile marketplace/bridge.py
+          python -m py_compile marketplace/installer.py
+          python -m py_compile marketplace/registry.py
+          python -m py_compile marketplace/sdk/cli.py
+
+      - name: Typecheck (optional, non-blocking)
+        continue-on-error: true
+        run: |
+          pip install mypy types-PyYAML
+          mypy marketplace/ --ignore-missing-imports --no-error-summary || true

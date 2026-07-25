@@ -58,7 +58,7 @@ class UserPreferenceHub:
         """Return default preference structure."""
         return {
             "output_contract": {
-                "verbosity": {"default": "concise", "by_scope": {}},
+                "verbosity": {"default": "concise", "by_scope": {"formatting": "detailed"}},
                 "format_defaults": {"default": "markdown", "by_scope": {}},
                 "structure_rules": [],
                 "tone_constraints": [],

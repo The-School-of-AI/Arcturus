@@ -42,6 +42,7 @@ class AppGenerator:
              raise ImportError("AppgenerationpromptSkill not found. Ensure core.skills.library.appgenerationprompt is available.")
 
         # Use ModelManager for generation with built-in retries
+        # NOTE: ModelManager handles provider switching and exponential backoff
         response_text = await self.model_manager.generate_text(generation_prompt)
 
         try:
@@ -62,7 +63,7 @@ class AppGenerator:
             generation_prompt = prompt_file.read_text()
             generation_prompt = generation_prompt.replace("{{USER_PROMPT}}", prompt)
             generation_prompt = generation_prompt.replace("{{FRONTEND_SPEC}}", json.dumps(frontend_spec, indent=2))
-
+            
         # Use ModelManager for generation with built-in retries
         response_text = await self.model_manager.generate_text(generation_prompt)
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Settings, Cpu, FileText, Brain, Wrench, RotateCcw, Save, AlertTriangle,
     Loader2, RefreshCw, Download, Check, X, Terminal, Code, Play, Bot, CheckCircle2,
-    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout, Zap
+    Search, LayoutList, ShieldAlert, MessageSquare, Clock, Layout, Zap, KeyRound, Eye, EyeOff, Dices, Info, Box
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -11,16 +11,9 @@ import { Input } from '@/components/ui/input';
 import { API_BASE } from '@/lib/api';
 import { useAppStore } from '@/store';
 import axios from 'axios';
-
-// Gemini model names (December 2025)
-const GEMINI_MODELS = [
-    { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash', description: 'Latest, fast (Dec 2025)' },
-    { value: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro', description: 'Best multimodal (Nov 2025)' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', description: 'Fast, grounded' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', description: 'Advanced reasoning' },
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', description: 'Low cost' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', description: 'Stable workhorse' },
-];
+import { GEMINI_MODELS_FALLBACK, type GeminiModel } from '@/lib/gemini-models';
+import { McpPanel } from '@/components/sidebar/McpPanel';
+import { McpInspector } from '@/components/mcp/McpInspector';
 
 interface OllamaModel {
     name: string;
@@ -64,10 +57,31 @@ interface SettingsData {
         enforce_local_verifier?: boolean;
     };
     remme: { extraction_prompt: string };
-    gemini: { api_key_env: string };
+    gemini: {
+        mode: 'api_key' | 'vertex_ai';
+        api_key_env: string;
+        vertex_ai: { project: string; location: string };
+    };
 }
 
-type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'advanced';
+interface ApiKeyDef {
+    env: string;
+    label: string;
+    type: 'secret' | 'url' | 'text';
+    configured: boolean;
+    preview: string | null;
+    generate?: boolean;
+    has_default?: boolean;
+}
+
+interface ApiKeyGroup {
+    label: string;
+    keys: ApiKeyDef[];
+    configured_count: number;
+    total_count: number;
+}
+
+type TabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp';
 
 const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini model selection' },
@@ -76,7 +90,33 @@ const TABS: { id: TabId; label: string; icon: typeof Cpu; description: string }[
     { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, and Debugging Agents' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Edit agent system prompts' },
     { id: 'skills', label: 'Skills', icon: Zap, description: 'Manage agent skills' },
+    { id: 'keys', label: 'API Keys', icon: KeyRound, description: 'Manage tokens & secrets' },
+    { id: 'mcp', label: 'MCP Servers', icon: Box, description: 'Model Context Protocol servers' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs, timeouts, restart' },
+    { id: 'about', label: 'About', icon: Info, description: 'Features & reference guide' },
+];
+
+const ABOUT_FEATURES = [
+    { name: 'Runs', description: 'Start and manage agent task executions. View run history, execution graphs, and token usage.' },
+    { name: 'RAG', description: 'Knowledge base manager. Upload, index, and search documents (PDFs, code, text) for agent retrieval.' },
+    { name: 'Notes', description: 'Markdown note-taking with folder hierarchy, full-text search, and AI-powered analysis.' },
+    { name: 'MCP', description: 'Model Context Protocol server manager. Add external tool servers (from PyPI or GitHub) to extend agent capabilities.' },
+    { name: 'RemMe', description: 'Persistent memory and user profiling. Stores facts and preferences the agent learns to personalize behavior.' },
+    { name: 'Graph', description: 'Neo4j knowledge graph explorer. Visualize entities and relationships extracted from your memories.' },
+    { name: 'Explorer', description: 'Local filesystem browser. Open any folder, browse files with syntax-aware icons, and open them in the IDE.' },
+    { name: 'Canvas', description: 'Real-time interactive surface via WebSocket. Agents render React widgets or arbitrary HTML/JS for dynamic UIs.' },
+    { name: 'Swarm', description: 'Multi-agent orchestration. Decompose complex tasks across specialized agents (Planner, Coder, Evaluator) running in parallel with a live DAG view.' },
+    { name: 'Apps', description: 'Dashboard builder with 60+ widget types (charts, tables, metrics, forms). Drag-and-drop grid layout. Generate apps from agent run reports.' },
+    { name: 'IDE', description: 'Full VS Code-style editor with Monaco, terminal, git sidebar, test runner, and AI coding assistant. Includes auto-commit system.' },
+    { name: 'Scheduler', description: 'Cron job manager. Automate recurring agent tasks with simple frequency picker or advanced cron expressions.' },
+    { name: 'Skills', description: 'Agent plugin system. Browse and install reusable skills from the community store, assign them to specific agents.' },
+    { name: 'Forge', description: 'AI document studio. Generate slides, documents, and spreadsheets from prompts. Outline approval, revision history, export to PPTX/DOCX/PDF.' },
+    { name: 'Console', description: 'Real-time system event log (Mission Control). Monitor tool calls, agent steps, and errors in a terminal-style view.' },
+    { name: 'Echo', description: 'Voice assistant. Say "Hey Arcturus" for hands-free interaction. Supports cloud (Deepgram/Azure) or fully-local (Whisper/Piper) privacy modes.' },
+    { name: 'News', description: 'RSS feed reader and web browser. Aggregate feeds, search the web, bookmark articles, and use AI to analyze content.' },
+    { name: 'Learn', description: 'Learning resources and tutorials. (Coming soon)' },
+    { name: 'Admin', description: 'Watchtower ops dashboard with 10 sub-tabs: Traces, Cost, Errors, Health, Flags, Config, Doctor, Throttle, Audit, Cache.' },
+    { name: 'Settings', description: 'System configuration. Models, RAG pipeline, agent behavior, API keys, prompts, skills, and advanced options.' },
 ];
 
 export const SettingsPage: React.FC = () => {
@@ -85,7 +125,13 @@ export const SettingsPage: React.FC = () => {
     const [prompts, setPrompts] = useState<Prompt[]>([]);
     const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
     const [promptContent, setPromptContent] = useState('');
-    const [geminiStatus, setGeminiStatus] = useState<{ configured: boolean; key_preview: string | null } | null>(null);
+    const [geminiStatus, setGeminiStatus] = useState<{
+        configured: boolean;
+        mode: string;
+        api_key_preview: string | null;
+        vertex_project: string | null;
+        vertex_location: string;
+    } | null>(null);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -98,20 +144,46 @@ export const SettingsPage: React.FC = () => {
     const [skills, setSkills] = useState<any[]>([]);
     const [assignments, setAssignments] = useState<Record<string, string[]>>({});
 
+    // Gemini models (dynamic from API)
+    const [geminiModels, setGeminiModels] = useState<GeminiModel[]>(GEMINI_MODELS_FALLBACK);
+    const [geminiModelsLoading, setGeminiModelsLoading] = useState(false);
+
+    // API Keys tab state
+    const [apiKeysStatus, setApiKeysStatus] = useState<Record<string, ApiKeyGroup> | null>(null);
+    const [apiKeyEdits, setApiKeyEdits] = useState<Record<string, string>>({});
+    const [apiKeyVisibility, setApiKeyVisibility] = useState<Record<string, boolean>>({});
+    const [savingKeys, setSavingKeys] = useState(false);
+
     useEffect(() => {
         fetchAll();
+        fetchGeminiModels();
     }, []);
+
+    const fetchGeminiModels = async () => {
+        setGeminiModelsLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/settings/gemini/models`);
+            if (res.data.status === 'success' && res.data.models?.length > 0) {
+                setGeminiModels(res.data.models);
+            }
+        } catch {
+            // Keep fallback models
+        } finally {
+            setGeminiModelsLoading(false);
+        }
+    };
 
     const fetchAll = async () => {
         setLoading(true);
         setError(null);
         try {
-            const [settingsRes, promptsRes, geminiRes, skillsRes, assignRes] = await Promise.all([
+            const [settingsRes, promptsRes, geminiRes, skillsRes, assignRes, apiKeysRes] = await Promise.all([
                 axios.get(`${API_BASE}/settings`),
                 axios.get(`${API_BASE}/prompts`),
                 axios.get(`${API_BASE}/gemini/status`).catch(() => ({ data: { configured: false, key_preview: null } })),
                 axios.get(`${API_BASE}/skills/list`).catch(() => ({ data: { skills: [] } })),
-                axios.get(`${API_BASE}/skills/assignments`).catch(() => ({ data: {} }))
+                axios.get(`${API_BASE}/skills/assignments`).catch(() => ({ data: {} })),
+                axios.get(`${API_BASE}/apikeys/status`).catch(() => ({ data: { groups: null } })),
             ]);
             await fetchOllamaModels();
             setSettings(settingsRes.data.settings);
@@ -119,6 +191,7 @@ export const SettingsPage: React.FC = () => {
             setGeminiStatus(geminiRes.data);
             setSkills(Array.isArray(skillsRes.data) ? skillsRes.data : []);
             setAssignments(assignRes.data || {});
+            setApiKeysStatus(apiKeysRes.data.groups || null);
         } catch (e: any) {
             setError(e.response?.data?.detail || 'Failed to load settings');
         } finally {
@@ -146,15 +219,15 @@ export const SettingsPage: React.FC = () => {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-sm">{skill.name}</span>
-                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">v{skill.version}</span>
+                                        <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20">v{skill.version}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                    <span className="text-[10px] text-muted-foreground">Triggers:</span>
+                                    <span className="text-xs text-muted-foreground">Triggers:</span>
                                     <div className="flex gap-1">
                                         {skill.intent_triggers.map((t: string) => (
-                                            <span key={t} className="text-[9px] bg-muted px-1.5 py-0.5 rounded border border-border">{t}</span>
+                                            <span key={t} className="text-2xs bg-muted px-1.5 py-0.5 rounded border border-border">{t}</span>
                                         ))}
                                     </div>
                                 </div>
@@ -386,27 +459,57 @@ export const SettingsPage: React.FC = () => {
                 onChange={(v) => updateSetting('models', 'memory_extraction', v)}
             />
 
-            {/* Gemini Status */}
-            <div className="p-4 rounded-lg border border-border bg-muted/20 mt-6">
-                <div className="flex items-center gap-2">
-                    {geminiStatus?.configured ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                        <X className="w-4 h-4 text-red-500" />
-                    )}
-                    <span className="text-sm font-medium">
-                        Gemini API Key: {geminiStatus?.configured ? 'Configured' : 'Not configured'}
-                    </span>
-                    {geminiStatus?.key_preview && (
-                        <span className="text-xs text-muted-foreground font-mono">({geminiStatus.key_preview})</span>
-                    )}
+            {/* Gemini Mode & Status */}
+            <SettingGroup title="Gemini Provider" description="Choose between API key (Developer API) or Vertex AI (Google Cloud)">
+                <div className="space-y-3">
+                    <select
+                        value={settings?.gemini?.mode || 'api_key'}
+                        onChange={(e) => {
+                            if (!settings) return;
+                            const mode = e.target.value as 'api_key' | 'vertex_ai';
+                            setSettings({
+                                ...settings,
+                                gemini: { ...settings.gemini, mode },
+                            });
+                            setHasChanges(true);
+                        }}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
+                    >
+                        <option value="api_key">Gemini Developer API (API Key)</option>
+                        <option value="vertex_ai">Vertex AI (Google Cloud Project)</option>
+                    </select>
+
+                    <div className="p-3 rounded-lg border border-border bg-muted/10">
+                        <div className="flex items-center gap-2">
+                            {geminiStatus?.configured ? (
+                                <Check className="w-4 h-4 text-green-500" />
+                            ) : (
+                                <X className="w-4 h-4 text-red-500" />
+                            )}
+                            <span className="text-sm font-medium">
+                                {geminiStatus?.configured ? 'Connected' : 'Not configured'}
+                            </span>
+                        </div>
+                        {(settings?.gemini?.mode || 'api_key') === 'api_key' ? (
+                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                                {geminiStatus?.api_key_preview ? (
+                                    <p>API Key: <span className="font-mono">{geminiStatus.api_key_preview}</span></p>
+                                ) : (
+                                    <p>Set <span className="font-mono">GEMINI_API_KEY</span> in the API Keys tab or as an environment variable.</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                                {geminiStatus?.vertex_project ? (
+                                    <p>Project: <span className="font-mono">{geminiStatus.vertex_project}</span> ({geminiStatus?.vertex_location || 'us-central1'})</p>
+                                ) : (
+                                    <p>Set <span className="font-mono">GOOGLE_CLOUD_PROJECT</span> in the API Keys tab and run <span className="font-mono">gcloud auth application-default login</span>.</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                {!geminiStatus?.configured && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                        Set GEMINI_API_KEY environment variable and restart the server.
-                    </p>
-                )}
-            </div>
+            </SettingGroup>
 
             <SettingGroup title="Insights Provider" description="Choose Ollama (local) or Gemini (cloud) for document insights">
                 <select
@@ -486,20 +589,29 @@ export const SettingsPage: React.FC = () => {
         return (
             <div className="space-y-6">
                 <SettingGroup title="Default Agent Model" description="Model used for agent execution (Cloud or Local)">
-                    <select
-                        value={currentValue}
-                        onChange={(e) => handleAgentModelChange(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
-                    >
-                        {/* Gemini Cloud Models */}
-                        <option disabled value="" className="text-muted-foreground font-semibold">
-                            Gemini (Cloud)
-                        </option>
-                        {GEMINI_MODELS.map((m) => (
-                            <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
-                                &nbsp;&nbsp;{m.label} — {m.description}
+                    <div className="flex items-center gap-2">
+                        <select
+                            value={currentValue}
+                            onChange={(e) => handleAgentModelChange(e.target.value)}
+                            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm"
+                        >
+                            {/* Gemini Cloud Models */}
+                            <option disabled value="" className="text-muted-foreground font-semibold">
+                                {geminiStatus?.mode === 'vertex_ai' ? 'Gemini (Vertex AI)' : 'Gemini (Cloud)'}
                             </option>
-                        ))}
+                            {geminiModels.map((m) => (
+                                <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
+                                    &nbsp;&nbsp;{m.label} — {m.description}
+                                </option>
+                            ))}
+
+                            {/* Show current model if not in list */}
+                            {settings?.agent.model_provider === 'gemini' &&
+                             !geminiModels.some(m => m.value === settings?.agent.default_model) && (
+                                <option value={currentValue}>
+                                    &nbsp;&nbsp;{settings?.agent.default_model} (custom)
+                                </option>
+                            )}
 
                         {/* Ollama Local Models */}
                         {ollamaTextModels.length > 0 && (
@@ -514,7 +626,16 @@ export const SettingsPage: React.FC = () => {
                                 ))}
                             </>
                         )}
-                    </select>
+                        </select>
+                        <button
+                            onClick={fetchGeminiModels}
+                            disabled={geminiModelsLoading}
+                            className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
+                            title="Refresh available models"
+                        >
+                            <RefreshCw className={cn("w-4 h-4", geminiModelsLoading && "animate-spin")} />
+                        </button>
+                    </div>
 
                     {/* Provider indicator */}
                     <div className="mt-2 flex items-center gap-2 text-xs">
@@ -522,15 +643,21 @@ export const SettingsPage: React.FC = () => {
                             <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">
                                 Local Execution
                             </span>
+                        ) : geminiStatus?.mode === 'vertex_ai' ? (
+                            <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                Vertex AI
+                            </span>
                         ) : (
                             <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Cloud Execution
+                                Gemini API
                             </span>
                         )}
                         <span className="text-muted-foreground">
                             {settings?.agent.model_provider === 'ollama'
                                 ? 'Running on your machine via Ollama'
-                                : 'Using Google Gemini API'}
+                                : geminiStatus?.mode === 'vertex_ai'
+                                    ? `Vertex AI — ${geminiStatus?.vertex_project || 'project'} (${geminiStatus?.vertex_location || 'us-central1'})`
+                                    : 'Using Google Gemini API'}
                         </span>
                     </div>
                 </SettingGroup>
@@ -583,7 +710,7 @@ export const SettingsPage: React.FC = () => {
                                     });
                                     setHasChanges(true);
                                 }}
-                                className="h-7 px-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
+                                className="h-7 px-2 text-xs uppercase tracking-wider font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1.5"
                             >
                                 <RotateCcw className="w-3 h-3" />
                                 Reset to Globals
@@ -651,7 +778,7 @@ export const SettingsPage: React.FC = () => {
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-foreground">{agentType}</span>
                                             <span className={cn(
-                                                "text-[9px] uppercase tracking-widest font-bold",
+                                                "text-2xs uppercase tracking-wide font-bold",
                                                 override ? "text-primary" : "text-muted-foreground"
                                             )}>
                                                 {override ? `${override.model_provider} — ${override.model}` : "Using Global Default"}
@@ -670,7 +797,7 @@ export const SettingsPage: React.FC = () => {
                                     >
                                         <option value="default" className="text-foreground">Global Default Model</option>
                                         <optgroup label="Gemini (Cloud)">
-                                            {GEMINI_MODELS.map(m => (
+                                            {geminiModels.map(m => (
                                                 <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
                                                     Gemini: {m.label}
                                                 </option>
@@ -781,7 +908,7 @@ export const SettingsPage: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => resetOverride(agentType)}
-                                className="h-7 text-[10px] text-muted-foreground hover:text-foreground"
+                                className="h-7 text-xs text-muted-foreground hover:text-foreground"
                             >
                                 <RotateCcw className="w-3 h-3 mr-1" />
                                 Reset to Default
@@ -794,7 +921,7 @@ export const SettingsPage: React.FC = () => {
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-shadow"
                     >
                         <option disabled value="" className="text-muted-foreground font-semibold">Gemini (Cloud)</option>
-                        {GEMINI_MODELS.map((m) => (
+                        {geminiModels.map((m) => (
                             <option key={`gemini:${m.value}`} value={`gemini:${m.value}`}>
                                 {m.label} — {m.description}
                             </option>
@@ -872,7 +999,7 @@ export const SettingsPage: React.FC = () => {
                                 )}
                             >
                                 <span className="block truncate">{p.name}</span>
-                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                                <span className="text-xs text-muted-foreground opacity-70">({p.lines} lines)</span>
                             </button>
                         ))}
                     </div>
@@ -891,7 +1018,7 @@ export const SettingsPage: React.FC = () => {
                                 )}
                             >
                                 <span className="block truncate">{p.name.replace('_', ' ')}</span>
-                                <span className="text-[10px] text-muted-foreground opacity-70">({p.lines} lines)</span>
+                                <span className="text-xs text-muted-foreground opacity-70">({p.lines} lines)</span>
                             </button>
                         ))}
                     </div>
@@ -958,6 +1085,219 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
+    // === API Keys Tab ===
+
+    const updateApiKeyEdit = (envName: string, value: string) => {
+        setApiKeyEdits(prev => ({ ...prev, [envName]: value }));
+    };
+
+    const toggleKeyVisibility = (envName: string) => {
+        setApiKeyVisibility(prev => ({ ...prev, [envName]: !prev[envName] }));
+    };
+
+    const generateRandomSecret = (envName: string) => {
+        const bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        const base64 = btoa(String.fromCharCode(...bytes));
+        updateApiKeyEdit(envName, base64);
+        // Make it visible so the user can see/copy the generated value
+        setApiKeyVisibility(prev => ({ ...prev, [envName]: true }));
+    };
+
+    const saveApiKeys = async () => {
+        const keysToSave: Record<string, string> = {};
+        for (const [envName, value] of Object.entries(apiKeyEdits)) {
+            keysToSave[envName] = value;
+        }
+        if (Object.keys(keysToSave).length === 0) return;
+
+        setSavingKeys(true);
+        setError(null);
+        try {
+            await axios.put(`${API_BASE}/apikeys`, { keys: keysToSave });
+            // Refresh status to show updated state
+            const [res, geminiRes] = await Promise.all([
+                axios.get(`${API_BASE}/apikeys/status`),
+                axios.get(`${API_BASE}/gemini/status`).catch(() => ({ data: { configured: false, key_preview: null } })),
+            ]);
+            setApiKeysStatus(res.data.groups || null);
+            setGeminiStatus(geminiRes.data);
+            setApiKeyEdits({});
+        } catch (e: any) {
+            setError(e.response?.data?.detail || 'Failed to save API keys');
+        } finally {
+            setSavingKeys(false);
+        }
+    };
+
+    const renderKeysTab = () => (
+        <div className="space-y-8">
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-start gap-2">
+                <KeyRound className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-blue-500/90">
+                    API keys are stored in <code className="font-mono bg-blue-500/10 px-1 rounded">.env</code> and loaded into the server environment.
+                    Changes take effect immediately without restart.
+                </p>
+            </div>
+
+            {apiKeysStatus && Object.entries(apiKeysStatus).map(([groupId, group]) => (
+                <div key={groupId} className="space-y-3">
+                    {/* Group header */}
+                    <div className="flex items-center gap-2 pb-2 border-b border-border">
+                        <h3 className="text-sm font-bold text-foreground">{group.label}</h3>
+                        <span className={cn(
+                            "text-xs px-1.5 py-0.5 rounded-full border",
+                            group.configured_count === group.total_count
+                                ? "bg-green-500/10 text-green-500 border-green-500/30"
+                                : group.configured_count > 0
+                                ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/30"
+                                : "bg-muted text-muted-foreground border-border"
+                        )}>
+                            {group.configured_count}/{group.total_count}
+                        </span>
+                    </div>
+
+                    {/* Key inputs */}
+                    <div className="grid gap-3">
+                        {group.keys.map((keyDef) => {
+                            const isEditing = keyDef.env in apiKeyEdits;
+                            const isVisible = apiKeyVisibility[keyDef.env] || false;
+                            const isSecret = keyDef.type === 'secret';
+
+                            return (
+                                <div key={keyDef.env} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/10">
+                                    <div className="mt-2.5">
+                                        {keyDef.configured ? (
+                                            <Check className="w-4 h-4 text-green-500" />
+                                        ) : (
+                                            <X className="w-4 h-4 text-red-500/50" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-1.5">
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm font-medium text-foreground">{keyDef.label}</label>
+                                            <code className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+                                                {keyDef.env}
+                                            </code>
+                                            {keyDef.has_default && keyDef.configured && (
+                                                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                                    auto
+                                                </span>
+                                            )}
+                                        </div>
+                                        {keyDef.configured && !isEditing && keyDef.preview && (
+                                            <p className="text-xs text-muted-foreground font-mono">
+                                                Current: {keyDef.preview}
+                                            </p>
+                                        )}
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Input
+                                                    type={isSecret && !isVisible ? 'password' : 'text'}
+                                                    value={isEditing ? apiKeyEdits[keyDef.env] : ''}
+                                                    onChange={(e) => updateApiKeyEdit(keyDef.env, e.target.value)}
+                                                    placeholder={keyDef.configured ? 'Enter new value to update...' : `Enter ${keyDef.label}...`}
+                                                    className="pr-10 font-mono text-sm"
+                                                />
+                                                {isSecret && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleKeyVisibility(keyDef.env)}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                                    >
+                                                        {isVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {keyDef.generate && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => generateRandomSecret(keyDef.env)}
+                                                    title="Generate random secret"
+                                                    className="shrink-0 px-2"
+                                                >
+                                                    <Dices className="w-4 h-4 mr-1" />
+                                                    Generate
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+
+            {/* Sticky save bar */}
+            {Object.keys(apiKeyEdits).length > 0 && (
+                <div className="sticky bottom-0 pt-4 pb-2 bg-background/80 backdrop-blur-sm border-t border-border">
+                    <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                            {Object.keys(apiKeyEdits).length} key(s) modified
+                        </p>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => setApiKeyEdits({})}>
+                                Discard
+                            </Button>
+                            <Button onClick={saveApiKeys} disabled={savingKeys}>
+                                {savingKeys ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                                Save API Keys
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderAboutTab = () => (
+        <div className="space-y-6">
+            <div className="p-4 rounded-lg border border-border bg-muted/20">
+                <h3 className="text-lg font-bold text-foreground mb-1">Arcturus</h3>
+                <p className="text-sm text-muted-foreground">
+                    A modular AI platform with 20 integrated apps for agent orchestration, knowledge management, code editing, and more.
+                </p>
+            </div>
+
+            <div>
+                <h3 className="text-sm font-bold text-foreground mb-3">Feature Reference</h3>
+                <div className="rounded-lg border border-border overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-muted/30 border-b border-border">
+                                <th className="text-left px-4 py-2.5 font-semibold text-foreground w-[120px]">Feature</th>
+                                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {ABOUT_FEATURES.map((f, i) => (
+                                <tr key={f.name} className={cn("border-b border-border last:border-0", i % 2 === 0 ? "bg-transparent" : "bg-muted/10")}>
+                                    <td className="px-4 py-2.5 font-medium text-foreground whitespace-nowrap">{f.name}</td>
+                                    <td className="px-4 py-2.5 text-muted-foreground">{f.description}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderMcpTab = () => (
+        <div className="flex gap-4 h-[calc(100vh-220px)] -mx-6 -mt-2">
+            {/* Server list (left) */}
+            <div className="w-[300px] shrink-0 border border-border/50 rounded-xl overflow-hidden">
+                <McpPanel />
+            </div>
+            {/* Inspector / tool toggles (right) */}
+            <div className="flex-1 border border-border/50 rounded-xl overflow-hidden">
+                <McpInspector />
+            </div>
+        </div>
+    );
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'models': return renderModelsTab();
@@ -965,7 +1305,11 @@ export const SettingsPage: React.FC = () => {
             case 'agent': return renderAgentTab();
             case 'ide': return renderIdeTab();
             case 'prompts': return renderPromptsTab();
+            case 'skills': return renderSkillsTab();
+            case 'keys': return renderKeysTab();
+            case 'mcp': return renderMcpTab();
             case 'advanced': return renderAdvancedTab();
+            case 'about': return renderAboutTab();
         }
     };
 
@@ -981,7 +1325,7 @@ export const SettingsPage: React.FC = () => {
                     <h2 className="font-bold text-foreground">{TABS.find(t => t.id === activeTab)?.label}</h2>
                     <p className="text-xs text-muted-foreground">{TABS.find(t => t.id === activeTab)?.description}</p>
                 </div>
-                {activeTab !== 'prompts' && (
+                {activeTab !== 'prompts' && activeTab !== 'keys' && activeTab !== 'skills' && activeTab !== 'about' && activeTab !== 'mcp' && (
                     <Button onClick={saveSettings} disabled={saving || !hasChanges}>
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
                         Save Changes

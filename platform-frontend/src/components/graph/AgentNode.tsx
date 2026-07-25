@@ -41,7 +41,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             className={cn(
                 "relative min-w-[180px] rounded-xl transition-all duration-300 group glass",
                 selected
-                    ? "border-primary border-glow bg-card"
+                    ? "border-primary  bg-card"
                     : "border-border hover:border-primary/50 bg-card/80 backdrop-blur-sm",
                 isRunning && "animate-pulse-subtle border-primary ring-2 ring-primary/30 ring-offset-2 ring-offset-background bg-card",
                 isStale && "opacity-90 grayscale border-border/50 bg-card/50 backdrop-blur-sm ring-2 ring-border/50"
@@ -51,13 +51,13 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
             {/* 🟢 Ticker UI for Running State */}
             {isRunning && (data.agent_prompt || data.prompt || data.description) && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-[280px] z-50 pointer-events-none">
-                    <div className="glass text-primary text-[10px] font-mono rounded-md px-2 py-1">
+                    <div className="glass text-primary text-xs font-mono rounded-md px-2 py-1">
                         <div className="flex items-center gap-1.5 mb-0.5 border-b border-primary/20 pb-0.5">
                             <span className="relative flex h-1.5 w-1.5">
                                 <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-primary"></span>
                             </span>
-                            <span className="font-bold tracking-wider uppercase text-[9px]">Active Task</span>
+                            <span className="font-bold tracking-wider uppercase text-2xs">Active Task</span>
                         </div>
                         <div className="overflow-hidden relative h-4">
                             <div className="animate-ticker whitespace-nowrap">
@@ -107,7 +107,7 @@ const AgentNode = ({ data, id, selected }: NodeProps<AgentNodeData>) => {
                     </h3>
 
                     {data.result && data.status === 'completed' && (
-                        <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-[120px]">
+                        <p className="text-xs text-muted-foreground mt-1 truncate max-w-[120px]">
                             {data.result}
                         </p>
                     )}

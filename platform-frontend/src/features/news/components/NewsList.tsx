@@ -31,7 +31,7 @@ export const NewsList: React.FC = () => {
         return (
             <div className="flex-1 flex flex-col items-center justify-center space-y-4 bg-card">
                 <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
-                <p className="text-sm text-muted-foreground animate-pulse font-mono tracking-widest">FETCHING INTELLIGENCE...</p>
+                <p className="text-sm text-muted-foreground animate-pulse font-mono tracking-wide">FETCHING INTELLIGENCE...</p>
             </div>
         );
     }
@@ -59,7 +59,7 @@ export const NewsList: React.FC = () => {
                         </>
                     )}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                     <span>{newsItems.length} ITEMS</span>
                     <div className="w-1 h-1 bg-cyan-500 rounded-full" />
                     <button
@@ -81,7 +81,7 @@ export const NewsList: React.FC = () => {
                         >
                             {/* Ranking */}
                             <div className="flex flex-col items-center gap-1 shrink-0 pt-1">
-                                <span className="text-[10px] font-bold text-muted-foreground/50 font-mono">{(index + 1).toString().padStart(2, '0')}</span>
+                                <span className="text-xs font-bold text-muted-foreground/50 font-mono">{(index + 1).toString().padStart(2, '0')}</span>
                                 <button className="p-1 hover:text-cyan-400 transition-colors text-muted-foreground/30">
                                     <ChevronUp className="w-4 h-4" />
                                 </button>
@@ -99,7 +99,7 @@ export const NewsList: React.FC = () => {
                                             {item.title}
                                         </h4>
                                         {item.url && (
-                                            <span className="text-[10px] font-normal text-muted-foreground/60 font-mono">
+                                            <span className="text-xs font-normal text-muted-foreground/60 font-mono">
                                                 {new URL(item.url).hostname.replace('www.', '')}
                                             </span>
                                         )}
@@ -123,12 +123,12 @@ export const NewsList: React.FC = () => {
                                     </p>
                                 )}
 
-                                <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground/60 pt-1">
+                                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground/60 pt-1">
                                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted">
                                         <Clock className="w-3 h-3" />
                                         <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
-                                    <span className="uppercase tracking-widest font-bold text-cyan-400/60">{item.source_name}</span>
+                                    <span className="uppercase tracking-wide font-bold text-cyan-400/60">{item.source_name}</span>
 
                                     {item.points && (
                                         <span className="text-muted-foreground">
@@ -146,7 +146,7 @@ export const NewsList: React.FC = () => {
                                 <Newspaper className="w-8 h-8 text-muted-foreground/40" />
                             </div>
                             <div>
-                                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No Intelligence Gathered</h4>
+                                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wide">No Intelligence Gathered</h4>
                                 <p className="text-xs text-muted-foreground/60 mt-1">Select a source or try refreshing the feed.</p>
                             </div>
                         </div>

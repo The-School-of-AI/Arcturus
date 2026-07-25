@@ -5,7 +5,7 @@ import time
 import uuid
 import hashlib
 from pathlib import Path
-from typing import List, Optional, Literal
+from typing import Any, List, Optional, Literal
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 
@@ -16,10 +16,10 @@ router = APIRouter(prefix="/chat", tags=["Chat"])
 class ChatMessage(BaseModel):
     id: str
     role: str
-    content: str
-    timestamp: float
+    content: Any = ""
+    timestamp: float = 0
     images: Optional[List[str]] = None
-    contexts: Optional[List[str]] = None
+    contexts: Optional[List] = None  # str or ContextItem dicts
     fileContexts: Optional[List[dict]] = None
 
 class ChatSession(BaseModel):

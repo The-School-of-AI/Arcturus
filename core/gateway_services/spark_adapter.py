@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 import secrets
 from typing import Any, Dict
 
-from core.gateway_services.exceptions import IntegrationDependencyUnavailable, UpstreamIntegrationError
+from config.gemini_client import is_gemini_configured
 from core.generator import AppGenerator
+from core.gateway_services.exceptions import IntegrationDependencyUnavailable, UpstreamIntegrationError
 from shared.state import PROJECT_ROOT
 
 
@@ -15,10 +15,10 @@ class SparkAdapter:
         query: str,
         template: str | None,
         oracle_context: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        if not os.getenv("GEMINI_API_KEY", "").strip():
+    ) -> Dict[str, Any]:
+        if not is_gemini_configured():
             raise IntegrationDependencyUnavailable(
-                "GEMINI_API_KEY is required for Spark page generation"
+                "Gemini API key or Vertex AI project is required for Spark page generation"
             )
 
         prompt = query.strip()

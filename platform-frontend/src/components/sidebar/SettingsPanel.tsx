@@ -1,9 +1,9 @@
 import React from 'react';
-import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight, Layout } from 'lucide-react';
+import { Cpu, FileText, Brain, Terminal, Wrench, Settings, ChevronRight, Layout, KeyRound, Info, Box } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
-type SettingsTabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
+type SettingsTabId = 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'keys' | 'advanced' | 'about' | 'mcp';
 
 const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: typeof Cpu; description: string }[] = [
     { id: 'models', label: 'Models', icon: Cpu, description: 'Ollama & Gemini models' },
@@ -11,7 +11,10 @@ const SETTINGS_TABS: { id: SettingsTabId; label: string; icon: typeof Cpu; descr
     { id: 'agent', label: 'Agent', icon: Brain, description: 'Execution & Gemini' },
     { id: 'ide', label: 'IDE', icon: Layout, description: 'IDE, Test, & Debugging' },
     { id: 'prompts', label: 'Prompts', icon: Terminal, description: 'Agent prompts' },
+    { id: 'keys', label: 'API Keys', icon: KeyRound, description: 'Tokens & secrets' },
+    { id: 'mcp', label: 'MCP Servers', icon: Box, description: 'External tool servers' },
     { id: 'advanced', label: 'Advanced', icon: Wrench, description: 'URLs & restart' },
+    { id: 'about', label: 'About', icon: Info, description: 'Features & reference' },
 ];
 
 export const SettingsPanel: React.FC = () => {
@@ -26,8 +29,8 @@ export const SettingsPanel: React.FC = () => {
                         <Settings className="w-4 h-4" />
                     </div>
                     <div>
-                        <h2 className="text-xs font-bold uppercase tracking-widest text-primary">System Settings</h2>
-                        <p className="text-[10px] text-muted-foreground opacity-60">Configure your environment</p>
+                        <h2 className="text-xs font-bold uppercase tracking-wide text-primary">System Settings</h2>
+                        <p className="text-xs text-muted-foreground opacity-60">Configure your environment</p>
                     </div>
                 </div>
             </div>
@@ -43,7 +46,7 @@ export const SettingsPanel: React.FC = () => {
                             className={cn(
                                 "w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 text-left group overflow-hidden relative",
                                 isActive
-                                    ? "border-primary/40 bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/20"
+                                    ? "border-primary/40 bg-primary/5 shadow-sm shadow-primary/5 ring-1 ring-primary/20"
                                     : "border-border/50 hover:border-primary/50 hover:bg-accent/50 hover:shadow-md"
                             )}
                         >
@@ -61,7 +64,7 @@ export const SettingsPanel: React.FC = () => {
                                 )}>
                                     {tab.label}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground opacity-60 truncate group-hover:opacity-100 transition-opacity">
+                                <div className="text-xs text-muted-foreground opacity-60 truncate group-hover:opacity-100 transition-opacity">
                                     {tab.description}
                                 </div>
                             </div>

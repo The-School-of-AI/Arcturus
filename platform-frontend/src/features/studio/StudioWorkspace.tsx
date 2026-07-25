@@ -139,16 +139,16 @@ function SlidesViewer({ tree }: { tree: any }) {
             {tree.slides?.map((slide: any, i: number) => (
                 <div key={slide.id || i} className="border border-border/50 rounded-xl p-4 bg-muted/10 hover:bg-muted/20 transition-colors">
                     <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             Slide {i + 1}
                         </span>
-                        <span className="text-[10px] text-muted-foreground capitalize">{slide.slide_type}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{slide.slide_type}</span>
                     </div>
                     {slide.title && <h3 className="text-sm font-semibold mb-2">{slide.title}</h3>}
                     <div className="space-y-1.5">
                         {slide.elements?.map((el: any, ei: number) => (
                             <div key={el.id || ei} className="text-xs text-foreground/80 pl-3 border-l-2 border-border/40">
-                                <span className="text-muted-foreground font-mono text-[10px]">[{el.type}]</span>{' '}
+                                <span className="text-muted-foreground font-mono text-xs">[{el.type}]</span>{' '}
                                 {el.type === 'chart' && el.content && typeof el.content === 'object' && !Array.isArray(el.content)
                                     ? <ChartSummary content={el.content} />
                                     : typeof el.content === 'string' ? el.content : Array.isArray(el.content) ? el.content.join(', ') : JSON.stringify(el.content)}
@@ -271,7 +271,7 @@ function UploadDataButton({ artifactId }: { artifactId: string }) {
             <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="px-2 py-0.5 rounded text-2xs uppercase font-bold tracking-tight bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50 flex items-center gap-1"
             >
                 {isUploading ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -281,7 +281,7 @@ function UploadDataButton({ artifactId }: { artifactId: string }) {
                 Upload Data
             </button>
             {error && (
-                <span className="text-[9px] text-red-400">{error}</span>
+                <span className="text-2xs text-red-400">{error}</span>
             )}
         </>
     );
@@ -304,7 +304,7 @@ export function StudioWorkspace() {
                     <Wand2 className="w-12 h-12 text-primary" />
                 </div>
                 <div className="space-y-1">
-                    <h2 className="text-xl font-bold text-foreground uppercase tracking-tighter">Forge Studio</h2>
+                    <h2 className="text-xl font-bold text-foreground uppercase tracking-tight">Forge Studio</h2>
                     <p className="text-xs text-muted-foreground">Create slides, documents, and spreadsheets with AI</p>
                 </div>
                 <button
@@ -355,10 +355,10 @@ export function StudioWorkspace() {
                 <div className="p-3 border-b border-border/50 flex items-center gap-2 shrink-0">
                     <Icon className="w-4 h-4 text-primary" />
                     <h2 className="text-sm font-semibold">{artifact.title}</h2>
-                    <span className="text-[10px] text-muted-foreground capitalize ml-1">{artifact.type}</span>
+                    <span className="text-xs text-muted-foreground capitalize ml-1">{artifact.type}</span>
                     <div className="flex items-center gap-2 ml-auto">
                         {outlineStatus === 'approved' && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-green-500/10 text-green-400">
+                            <span className="px-1.5 py-0.5 rounded text-2xs uppercase font-bold tracking-tight bg-green-500/10 text-green-400">
                                 Generated
                             </span>
                         )}
@@ -369,7 +369,7 @@ export function StudioWorkspace() {
                             <>
                                 <button
                                     onClick={() => setPreviewOpen(true)}
-                                    className="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-tighter bg-muted/30 text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
+                                    className="px-2 py-0.5 rounded text-2xs uppercase font-bold tracking-tight bg-muted/30 text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
                                 >
                                     <Eye className="w-3 h-3" />
                                     Preview

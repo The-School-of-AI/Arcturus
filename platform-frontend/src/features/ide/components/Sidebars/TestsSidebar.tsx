@@ -323,7 +323,7 @@ export const TestsSidebar: React.FC = () => {
             <div className="flex items-center justify-between px-4 py-2 bg-muted/20 border-b border-border/50 shrink-0">
                 <div className="flex items-center gap-2">
                     <FlaskConical className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
+                    <span className="text-xs font-bold tracking-wide uppercase text-muted-foreground">
                         Tests
                     </span>
                 </div>
@@ -331,7 +331,7 @@ export const TestsSidebar: React.FC = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 hover:bg-white/5"
+                        className="h-7 w-7 hover:bg-accent"
                         onClick={fetchTests}
                         disabled={loading}
                         title="Refresh tests"
@@ -343,7 +343,7 @@ export const TestsSidebar: React.FC = () => {
 
             {/* Current File */}
             <div className="px-3 py-2 border-b border-border/10 bg-muted/10">
-                <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Testing</p>
+                <p className="text-xs text-muted-foreground/60 uppercase tracking-wider mb-1">Testing</p>
                 <p className="text-[11px] font-medium truncate" title={currentFile}>
                     {currentFile.split('/').pop()}
                 </p>
@@ -354,7 +354,7 @@ export const TestsSidebar: React.FC = () => {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => handleSelectAll(!allSelected)}
-                        className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         title={allSelected ? "Deselect all" : "Select all"}
                     >
                         {allSelected ? (
@@ -371,7 +371,7 @@ export const TestsSidebar: React.FC = () => {
                 <select
                     value={filter}
                     onChange={(e) => setFilter(e.target.value as FilterType)}
-                    className="text-[10px] bg-muted/30 border border-border/30 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    className="text-xs bg-muted/30 border border-border/30 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/20"
                 >
                     <option value="all">All Tests</option>
                     <option value="today">Today</option>
@@ -384,8 +384,8 @@ export const TestsSidebar: React.FC = () => {
                 {tests.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-8 opacity-30 text-center">
                         <FlaskConical className="w-8 h-8 mb-2" />
-                        <p className="text-[10px] tracking-tight uppercase font-bold">No tests found</p>
-                        <p className="text-[9px] mt-1 text-muted-foreground">
+                        <p className="text-xs tracking-tight uppercase font-bold">No tests found</p>
+                        <p className="text-2xs mt-1 text-muted-foreground">
                             Tests will appear here after generation
                         </p>
                     </div>
@@ -396,7 +396,7 @@ export const TestsSidebar: React.FC = () => {
                             <div className="mb-2">
                                 <button
                                     onClick={() => toggleGroup('behavior')}
-                                    className="w-full px-3 py-1 flex items-center justify-between hover:bg-white/5 transition-colors"
+                                    className="w-full px-3 py-1 flex items-center justify-between hover:bg-accent transition-colors"
                                 >
                                     <div className="flex items-center gap-1">
                                         {expandedGroups.has('behavior') ? (
@@ -404,11 +404,11 @@ export const TestsSidebar: React.FC = () => {
                                         ) : (
                                             <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
                                         )}
-                                        <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">
+                                        <span className="text-2xs font-bold text-muted-foreground/70 uppercase tracking-wide">
                                             Behavior
                                         </span>
                                     </div>
-                                    <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1 rounded-sm">
+                                    <span className="text-2xs bg-blue-500/20 text-blue-400 px-1 rounded-sm">
                                         {groupedTests.behavior.length}
                                     </span>
                                 </button>
@@ -458,7 +458,7 @@ export const TestsSidebar: React.FC = () => {
                             <div className="mb-2">
                                 <button
                                     onClick={() => toggleGroup('spec')}
-                                    className="w-full px-3 py-1 flex items-center justify-between hover:bg-white/5 transition-colors"
+                                    className="w-full px-3 py-1 flex items-center justify-between hover:bg-accent transition-colors"
                                 >
                                     <div className="flex items-center gap-1">
                                         {expandedGroups.has('spec') ? (
@@ -466,11 +466,11 @@ export const TestsSidebar: React.FC = () => {
                                         ) : (
                                             <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
                                         )}
-                                        <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-widest">
+                                        <span className="text-2xs font-bold text-muted-foreground/70 uppercase tracking-wide">
                                             Spec
                                         </span>
                                     </div>
-                                    <span className="text-[9px] bg-purple-500/20 text-purple-400 px-1 rounded-sm">
+                                    <span className="text-2xs bg-purple-500/20 text-purple-400 px-1 rounded-sm">
                                         {groupedTests.spec.length}
                                     </span>
                                 </button>
@@ -522,7 +522,7 @@ export const TestsSidebar: React.FC = () => {
                 {/* Generation Status */}
                 {generationStatus && (
                     <div className={cn(
-                        "flex items-center gap-2 text-[10px] px-2 py-1.5 rounded",
+                        "flex items-center gap-2 text-xs px-2 py-1.5 rounded",
                         generationStatus.startsWith('✓') ? "bg-green-500/10 text-green-400" :
                             generationStatus.startsWith('✗') ? "bg-red-500/10 text-red-400" :
                                 generationStatus.startsWith('⚠') ? "bg-amber-500/10 text-amber-400" :
@@ -535,7 +535,7 @@ export const TestsSidebar: React.FC = () => {
 
                 {/* Last Run Results */}
                 {lastResults && (
-                    <div className="flex items-center justify-between text-[10px] px-2 py-1 bg-muted/30 rounded">
+                    <div className="flex items-center justify-between text-xs px-2 py-1 bg-muted/30 rounded">
                         <span className="text-muted-foreground">Last Run:</span>
                         <div className="flex items-center gap-2">
                             <span className="text-green-400">{lastResults.passed} passed</span>
@@ -548,7 +548,7 @@ export const TestsSidebar: React.FC = () => {
 
                 {/* Auto-generation indicator (no manual button - tests generate on commit) */}
                 {isGenerating && (
-                    <div className="flex items-center gap-2 text-[10px] px-2 py-1.5 bg-blue-500/10 text-blue-400 rounded">
+                    <div className="flex items-center gap-2 text-xs px-2 py-1.5 bg-blue-500/10 text-blue-400 rounded">
                         <Loader2 className="w-3 h-3 animate-spin" />
                         <Zap className="w-3 h-3" />
                         <span>Tests auto-generating on commit...</span>
@@ -640,7 +640,7 @@ const TestItemRow: React.FC<{
     return (
         <div className="flex flex-col border-b border-border/10 last:border-0">
             <div
-                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 transition-all cursor-pointer select-none"
+                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-accent transition-all cursor-pointer select-none"
                 onClick={handleRowClick}
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -659,7 +659,7 @@ const TestItemRow: React.FC<{
 
                     <span
                         className={cn(
-                            "truncate transition-colors text-[10px]",
+                            "truncate transition-colors text-xs",
                             test.status === 'orphaned' ? "text-muted-foreground/50 line-through" : "text-foreground/80"
                         )}
                         title={test.name}
@@ -672,7 +672,7 @@ const TestItemRow: React.FC<{
                     {onOpenTest && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onOpenTest(); }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-all"
                             title="Open test file"
                         >
                             <FlaskConical className="w-3 h-3 text-muted-foreground" />
@@ -684,7 +684,7 @@ const TestItemRow: React.FC<{
                             e.stopPropagation();
                             if (onExpand) onExpand();
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-all"
                         title="Go to source code"
                     >
                         <Code2 className="w-3 h-3 text-muted-foreground" />
@@ -698,7 +698,7 @@ const TestItemRow: React.FC<{
                 <div className="bg-muted/5 pb-2">
                     {/* Failure Message */}
                     {failure && (
-                        <div className="mx-3 mt-1 mb-2 p-2 text-[10px] bg-red-500/10 border-l-2 border-red-500/30 rounded-r font-mono whitespace-pre-wrap overflow-x-auto text-red-300">
+                        <div className="mx-3 mt-1 mb-2 p-2 text-xs bg-red-500/10 border-l-2 border-red-500/30 rounded-r font-mono whitespace-pre-wrap overflow-x-auto text-red-300">
                             {failure.message}
                         </div>
                     )}
@@ -706,7 +706,7 @@ const TestItemRow: React.FC<{
                     {/* Test Code */}
                     {test.code && (
                         <div className="mx-3 mt-1 relative group/code">
-                            <div className="text-[10px] font-mono text-muted-foreground bg-muted/30 p-2 rounded overflow-x-auto whitespace-pre border border-border/20">
+                            <div className="text-xs font-mono text-muted-foreground bg-muted/30 p-2 rounded overflow-x-auto whitespace-pre border border-border/20">
                                 {test.code}
                             </div>
                         </div>

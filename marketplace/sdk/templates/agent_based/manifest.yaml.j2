@@ -1,0 +1,22 @@
+# Bazaar Skill Manifest — agent_based template
+name: {{ skill_name }}
+version: "1.0.0"
+description: "TODO: describe what {{ skill_name }} does"
+author: "{{ author }}"
+category: "productivity"
+permissions: []              # calls other skills, not external APIs directly
+dependencies: []
+skill_dependencies:
+  - "skill_name_here"        # TODO: replace with actual skill dependencies
+intent_triggers:
+  - "{{ skill_name }}"
+tools:
+  - name: run_{{ skill_name }}
+    description: "TODO: describe this orchestration tool"
+    module: "{{ skill_name }}.tools.main"
+    function: "run"
+    parameters:
+      task:
+        type: string
+        description: "High-level task to delegate to sub-skills"
+checksum: ""

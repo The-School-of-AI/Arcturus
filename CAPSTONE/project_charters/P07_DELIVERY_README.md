@@ -309,11 +309,11 @@ Unlike standard chat, the voice pipeline handles ambiguity as a blocking state. 
 6. Say **"Hey Arcturus"**
 7. Observe wake detection:
    ```
-   🎙️ [Orchestrator] Wake word detected. Listening...
+   [Orchestrator] Wake word detected. Listening...
    ```
 8. Speak a command (e.g., "set a timer for twenty three minutes")
 9. Observe refined transcript:
    ```
-   🗨️ [Orchestrator] "set a timer for twenty three minutes" → "Set a timer for 23 minutes."
+   [Orchestrator] "set a timer for twenty three minutes" → "Set a timer for 23 minutes."
    ```
 10. The follow-up window stays open for 30 seconds (no wake word needed)

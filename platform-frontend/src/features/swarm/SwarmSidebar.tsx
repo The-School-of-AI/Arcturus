@@ -140,7 +140,7 @@ export const SwarmSidebar: React.FC = () => {
                                         variant="ghost"
                                         size="sm"
                                         disabled={isOptimizing || isStarting || !query.trim()}
-                                        className="h-6 text-xs text-neon-yellow hover:text-neon-yellow hover:bg-neon-yellow/10 px-2 gap-1 disabled:opacity-50"
+                                        className="h-6 text-xs text-primary hover:text-primary hover:bg-primary/10 px-2 gap-1 disabled:opacity-50"
                                         onClick={async () => {
                                             if (!query) return;
                                             setIsOptimizing(true);
@@ -169,7 +169,7 @@ export const SwarmSidebar: React.FC = () => {
                             </Button>
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={() => setIsNewRunOpen(false)} className="border-border text-foreground hover:bg-muted" disabled={isStarting}>Cancel</Button>
-                                <Button onClick={handleStart} disabled={isStarting || !query.trim()} className="bg-neon-yellow text-charcoal-950 hover:bg-neon-yellow/90 font-semibold min-w-[100px]">
+                                <Button onClick={handleStart} disabled={isStarting || !query.trim()} className="bg-primary text-charcoal-950 hover:bg-primary/90 font-semibold min-w-[100px]">
                                     {isStarting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Swarm"}
                                 </Button>
                             </div>
@@ -201,7 +201,7 @@ export const SwarmSidebar: React.FC = () => {
                                     "group relative p-4 rounded-xl border transition-all duration-300 cursor-pointer",
                                     "hover:shadow-md",
                                     isActive
-                                        ? "border-neon-yellow/40 hover:border-neon-yellow/60 bg-neon-yellow/5"
+                                        ? "border-primary/40 hover:border-primary/60 bg-primary/5"
                                         : "border-border/50 hover:border-primary/50 hover:bg-accent/50"
                                 )}
                             >
@@ -210,7 +210,7 @@ export const SwarmSidebar: React.FC = () => {
                                         <p className={cn(
                                             "text-[13px] leading-relaxed font-medium transition-all duration-300 line-clamp-2",
                                             isActive
-                                                ? "text-neon-yellow selection:bg-neon-yellow/30"
+                                                ? "text-primary selection:bg-primary/30"
                                                 : displayStatus === 'failed'
                                                     ? "text-red-500 group-hover:text-red-400"
                                                     : "text-foreground group-hover:text-foreground/80"
@@ -223,14 +223,14 @@ export const SwarmSidebar: React.FC = () => {
                                         <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-all duration-200">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handlePauseResume(); }}
-                                                className="p-1.5 rounded-lg hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                                className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary"
                                                 title={isPaused ? 'Resume' : 'Pause'}
                                             >
                                                 {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                                             </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setInterventionOpen(true); }}
-                                                className="p-1.5 rounded-lg hover:bg-neon-yellow/10 text-muted-foreground hover:text-neon-yellow"
+                                                className="p-1.5 rounded-lg hover:bg-primary/10 text-muted-foreground hover:text-primary"
                                                 title="Intervene"
                                             >
                                                 <Zap className="w-3.5 h-3.5" />
@@ -248,24 +248,24 @@ export const SwarmSidebar: React.FC = () => {
                                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                                                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                                                     </span>
-                                                    <span className="text-[10px] font-medium text-primary">Running {isActive ? `(${completedCount}/${totalCount})` : ''}</span>
+                                                    <span className="text-xs font-medium text-primary">Running {isActive ? `(${completedCount}/${totalCount})` : ''}</span>
                                                 </div>
                                             ) : displayStatus === 'failed' ? (
                                                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20">
                                                     <XCircle className="w-2.5 h-2.5 text-red-500" />
-                                                    <span className="text-[10px] font-medium text-red-500">Failed</span>
+                                                    <span className="text-xs font-medium text-red-500">Failed</span>
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20">
                                                     <CheckCircle2 className="w-2.5 h-2.5 text-green-500" />
-                                                    <span className="text-[10px] font-medium text-green-500">Completed</span>
+                                                    <span className="text-xs font-medium text-green-500">Completed</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Cost display */}
                                         {costEnabled && isActive && costUsd > 0 && (
-                                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                                            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                                 <span>${costUsd.toFixed(4)}</span>
                                             </div>
                                         )}
@@ -275,7 +275,7 @@ export const SwarmSidebar: React.FC = () => {
                                     {isActive && totalCount > 0 && displayStatus === 'running' && (
                                         <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-neon-yellow shadow-[0_0_10px_rgba(234,255,0,0.5)] transition-all duration-500"
+                                                className="h-full bg-primary shadow-[0_0_10px_rgba(234,255,0,0.5)] transition-all duration-500"
                                                 style={{ width: `${Math.max(5, (completedCount / totalCount) * 100)}%` }}
                                             />
                                         </div>

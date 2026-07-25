@@ -42,7 +42,7 @@ export const InputCard: React.FC<ControlCardProps> = ({
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
             {showLabel && displayLabel && (
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>
+                <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>
             )}
             <Input
                 className="h-8 text-xs bg-muted border-border"
@@ -99,7 +99,7 @@ export const SelectCard: React.FC<ControlCardProps> = ({
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
             {showLabel && displayLabel && (
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>
+                <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>
             )}
             <div className="relative">
                 <select
@@ -133,13 +133,13 @@ export const DateRangeCard: React.FC<ControlCardProps> = ({
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
             {showLabel && displayLabel && (
-                <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>
+                <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>
             )}
-            <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded cursor-pointer hover:border-white/20 transition-colors">
+            <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded cursor-pointer hover:border-border transition-colors">
                 <Calendar className="w-3 h-3" style={{ color: accentColor }} />
-                <span className="text-[10px] text-foreground ">{startDate}</span>
+                <span className="text-xs text-foreground ">{startDate}</span>
                 <span className="text-muted-foreground">→</span>
-                <span className="text-[10px] text-foreground ">{endDate}</span>
+                <span className="text-xs text-foreground ">{endDate}</span>
             </div>
         </div>
     );
@@ -159,7 +159,7 @@ export const CheckboxCard: React.FC<ControlCardProps> = ({ label = "Enable Featu
                 checked={checked}
                 onCheckedChange={(c) => isInteractive && onUpdate && onUpdate({ ...data, checked: c })}
                 disabled={!isInteractive}
-                className="border-white/20 data-[state=checked]:text-black"
+                className="border-border data-[state=checked]:text-black"
                 style={{
                     backgroundColor: checked ? accentColor : undefined,
                     borderColor: checked ? accentColor : undefined
@@ -194,7 +194,7 @@ export const TextareaCard: React.FC<ControlCardProps> = ({ label = "Comments", p
     const displayLabel = data.label || label;
     return (
         <div className="p-3 h-full flex flex-col gap-2">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <Textarea
                 placeholder={data.placeholder || placeholder}
                 className="resize-none bg-muted border-border text-xs min-h-[60px]"
@@ -224,7 +224,7 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
 
     return (
         <div className="p-3 h-full flex flex-col gap-2">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="space-y-1.5">
                 {options.map((opt: { label: string; value: string }, idx: number) => (
                     <div
@@ -235,7 +235,7 @@ export const RadioGroupCard: React.FC<ControlCardProps> = ({ label = "Select Opt
                         <div
                             className={cn(
                                 "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
-                                isInteractive && "hover:border-white/40"
+                                isInteractive && "hover:border-border"
                             )}
                             style={{ borderColor: selected === opt.value ? accentColor : 'rgba(255,255,255,0.2)' }}
                         >
@@ -260,7 +260,7 @@ export const SliderCard: React.FC<ControlCardProps> = ({ label = "Volume", data 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
             <div className="flex justify-between">
-                {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+                {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
                 <span className="text-xs ">{value}</span>
             </div>
             <input
@@ -284,10 +284,10 @@ export const TagsInputCard: React.FC<ControlCardProps> = ({ label = "Tags", data
 
     return (
         <div className="p-3 h-full flex flex-col gap-2">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="flex flex-wrap gap-1 mb-1">
                 {tags.map((tag: string) => (
-                    <span key={tag} className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[10px] flex items-center gap-1 border border-primary/20">
+                    <span key={tag} className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-xs flex items-center gap-1 border border-primary/20">
                         {tag} <X className="w-2 h-2 opacity-50 cursor-pointer" />
                     </span>
                 ))}
@@ -302,7 +302,7 @@ export const NumberInputCard: React.FC<ControlCardProps> = ({ label = "Quantity"
     const displayLabel = data.label || label;
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <Input
                 type="number"
                 className="h-8 text-xs bg-muted border-border "
@@ -323,9 +323,9 @@ export const ColorPickerCard: React.FC<ControlCardProps> = ({ label = "Theme Col
         <div className="p-3 h-full flex items-center justify-between gap-2">
             {showLabel && <label className="text-xs font-medium text-muted-foreground">{displayLabel}</label>}
             <div className="flex items-center gap-2">
-                <span className="text-[10px]  text-muted-foreground">{value}</span>
+                <span className="text-xs  text-muted-foreground">{value}</span>
                 <div
-                    className="w-6 h-6 rounded border border-white/20"
+                    className="w-6 h-6 rounded border border-border"
                     style={{ backgroundColor: value }}
                 />
             </div>
@@ -342,7 +342,7 @@ export const RatingCard: React.FC<ControlCardProps> = ({ label = "Rating", data 
 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-1">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="flex gap-0.5">
                 {Array.from({ length: max }).map((_, i) => (
                     <Star
@@ -371,7 +371,7 @@ export const TimePickerCard: React.FC<ControlCardProps> = ({ label = "Time", dat
 
     return (
         <div className="p-3 h-full flex flex-col justify-center gap-2">
-            {showLabel && <label className="text-[10px] uppercase font-bold text-muted-foreground">{displayLabel}</label>}
+            {showLabel && <label className="text-xs uppercase font-bold text-muted-foreground">{displayLabel}</label>}
             <div className="relative">
                 <Input
                     type="time"

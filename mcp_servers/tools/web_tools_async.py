@@ -43,9 +43,18 @@ def is_difficult_website(url: str) -> bool:
         print(f"⚠️ Failed to read difficult_websites.txt: {e}")
         return False
 
+import re
+
 # Make sure these utilities exist
 def ascii_only(text: str) -> str:
     return text.encode("ascii", errors="ignore").decode()
+
+def sanitize_for_xml(text: str) -> str:
+    """Remove NULL bytes and XML-incompatible control characters from text."""
+    if not text:
+        return text
+    # Remove null bytes and C0 control chars (except tab, newline, carriage return)
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
 
 def choose_best_text(visible, main, trafilatura_):
     # Simple heuristic: prefer main if long, fallback otherwise
@@ -95,6 +104,8 @@ async def web_tool_playwright(url: str, max_total_wait: int = 15) -> dict:
                 print("⚠️ JS stop failed:", e)
 
             html = await page.content()
+            # Sanitize: remove null bytes and control chars that crash lxml
+            html = sanitize_for_xml(html)
             visible_text = await page.inner_text("body")
             title = await page.title()
             await browser.close()
@@ -136,16 +147,30 @@ async def web_tool_playwright(url: str, max_total_wait: int = 15) -> dict:
         })
 
     except Exception as e:
-        traceback.print_exc()
-        result.update({
-            "title": "[error]",
-            "html": "",
-            "text": f"[error: {e}]",
-            "main_text": "[no HTML extracted]",
-            "trafilatura_text": "",
-            "best_text": "[no text]",
-            "best_text_source": "error"
-        })
+        err_msg = str(e)
+        # Handle PDF/download URLs gracefully
+        if "Download is starting" in err_msg:
+            print(f"⚠️ URL triggers download (likely PDF): {url}")
+            result.update({
+                "title": "[binary/PDF download]",
+                "html": "",
+                "text": f"[This URL ({url}) triggers a file download and cannot be scraped as a webpage]",
+                "main_text": "",
+                "trafilatura_text": "",
+                "best_text": f"[Binary download URL — not a webpage: {url}]",
+                "best_text_source": "download_skip"
+            })
+        else:
+            traceback.print_exc()
+            result.update({
+                "title": "[error]",
+                "html": "",
+                "text": f"[error: {e}]",
+                "main_text": "[no HTML extracted]",
+                "trafilatura_text": "",
+                "best_text": "[no text]",
+                "best_text_source": "error"
+            })
 
     return result
 
@@ -154,6 +179,21 @@ import httpx
 async def smart_web_extract(url: str, timeout: int = 5) -> dict:
 
     headers = get_random_headers()
+
+    # Skip binary/download URLs early (PDF, ZIP, etc.)
+    lower_url = url.lower().split('?')[0]
+    if any(lower_url.endswith(ext) for ext in ('.pdf', '.zip', '.tar.gz', '.exe', '.dmg', '.pkg', '.bin', '.iso')):
+        print(f"⚠️ Skipping binary URL: {url}")
+        return {
+            "url": url,
+            "title": f"[Binary file: {lower_url.split('.')[-1].upper()}]",
+            "html": "",
+            "text": f"[This URL points to a downloadable file, not a webpage: {url}]",
+            "main_text": "",
+            "trafilatura_text": "",
+            "best_text": f"[Binary download — not a webpage: {url}]",
+            "best_text_source": "binary_skip"
+        }
 
     try:
 
@@ -165,6 +205,9 @@ async def smart_web_extract(url: str, timeout: int = 5) -> dict:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             response = await client.get(url, headers=headers)
             html = response.content.decode("utf-8", errors="replace")
+
+        # Sanitize: remove null bytes and control chars that crash lxml
+        html = sanitize_for_xml(html)
 
         doc = Document(html)
         main_html = doc.summary()

@@ -86,6 +86,9 @@ interface RagViewerSlice {
     isSidebarSubPanelOpen: boolean;
     setSidebarSubPanelOpen: (open: boolean) => void;
     toggleSidebarSubPanel: () => void;
+    isSidebarExpanded: boolean;
+    setSidebarExpanded: (expanded: boolean) => void;
+    toggleSidebarExpanded: () => void;
 
     // --- RAG Document Management ---
     ragOpenDocuments: RAGDocument[];
@@ -119,8 +122,8 @@ interface RagViewerSlice {
     clearSelectedFileContexts: () => void;
     selectedMcpServer: string | null;
     setSelectedMcpServer: (server: string | null) => void;
-    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced';
-    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'advanced') => void;
+    settingsActiveTab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp';
+    setSettingsActiveTab: (tab: 'models' | 'rag' | 'agent' | 'ide' | 'prompts' | 'skills' | 'keys' | 'advanced' | 'about' | 'mcp') => void;
     showRagInsights: boolean;
     setShowRagInsights: (show: boolean) => void;
     toggleRagInsights: () => void;
@@ -233,6 +236,8 @@ interface IdeSlice {
 
 interface RemmeSlice {
     memories: Memory[];
+    memoriesLoading: boolean;
+    memoriesError: boolean;
     setMemories: (memories: Memory[]) => void;
     fetchMemories: () => Promise<void>;
     addMemory: (text: string, category?: string, space_id?: string | null) => Promise<void>;
@@ -416,9 +421,18 @@ interface InboxSlice {
 // --- Scheduler Slice ---
 interface SchedulerSlice {
     jobs: any[];
+    selectedJobId: string | null;
+    jobHistory: any[];
+    jobHistoryLoading: boolean;
+    triggeredJobIds: Set<string>;
     fetchJobs: () => Promise<void>;
     createJob: (job: { name: string, cron: string, query: string, agent_type?: string }) => Promise<void>;
     deleteJob: (id: string) => Promise<void>;
+    selectJob: (id: string | null) => void;
+    fetchJobHistory: (jobId: string) => Promise<void>;
+    triggerJob: (jobId: string) => Promise<void>;
+    deleteJobHistoryEntry: (jobId: string, runId: string) => Promise<void>;
+    updateJob: (id: string, data: { name?: string, cron?: string, query?: string }) => Promise<void>;
 }
 
 // --- Event Bus Slice ---
@@ -441,9 +455,9 @@ interface StudioSlice {
     isStudioModalOpen: boolean;
     fetchArtifacts: () => Promise<void>;
     loadArtifact: (id: string) => Promise<void>;
-    createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string) => Promise<void>;
+    createArtifact: (type: 'slides' | 'documents' | 'sheets', prompt: string, title?: string, slideMode?: string) => Promise<void>;
     approveError: string | null;
-    approveOutline: (id: string) => Promise<void>;
+    approveOutline: (id: string, modifications?: Record<string, any>) => Promise<void>;
     rejectOutline: (id: string) => Promise<void>;
     setActiveArtifactId: (id: string | null) => void;
     setIsStudioModalOpen: (open: boolean) => void;
@@ -470,6 +484,7 @@ interface StudioSlice {
     editError: string | null;
     editConflict: boolean;
     applyEditInstruction: (artifactId: string, instruction: string, baseRevisionId?: string) => Promise<void>;
+    patchSlideContent: (artifactId: string, slides: Record<number, Record<string, string>>, baseRevisionId?: string) => Promise<void>;
     clearEditState: () => void;
 }
 
@@ -635,6 +650,10 @@ export const useAppStore = create<AppState>()(
 
             // --- Scheduler Slice Implementation ---
             jobs: [],
+            selectedJobId: null,
+            jobHistory: [],
+            jobHistoryLoading: false,
+            triggeredJobIds: new Set<string>(),
             fetchJobs: async () => {
                 try {
                     const res = await api.get(`${API_BASE}/cron/jobs`);
@@ -655,9 +674,75 @@ export const useAppStore = create<AppState>()(
             deleteJob: async (id) => {
                 try {
                     await api.delete(`${API_BASE}/cron/jobs/${id}`);
+                    const wasSelected = get().selectedJobId === id;
                     await get().fetchJobs();
+                    if (wasSelected) set({ selectedJobId: null, jobHistory: [] });
                 } catch (e) {
                     console.error("Failed to delete job", e);
+                }
+            },
+            selectJob: (id) => {
+                set({ selectedJobId: id, jobHistory: [] });
+                if (id) get().fetchJobHistory(id);
+            },
+            fetchJobHistory: async (jobId) => {
+                set({ jobHistoryLoading: true });
+                try {
+                    const res = await api.get(`${API_BASE}/cron/jobs/${jobId}/history`);
+                    set({ jobHistory: res.data, jobHistoryLoading: false });
+                } catch (e) {
+                    console.error("Failed to fetch job history", e);
+                    set({ jobHistoryLoading: false });
+                }
+            },
+            triggerJob: async (jobId) => {
+                try {
+                    // Mark as triggered (running)
+                    const newTriggered = new Set(get().triggeredJobIds);
+                    newTriggered.add(jobId);
+                    set({ triggeredJobIds: newTriggered });
+
+                    await api.post(`${API_BASE}/cron/jobs/${jobId}/trigger`);
+                    await get().fetchJobs();
+
+                    // Poll history frequently to catch the result and clear running state
+                    const prevHistoryLen = get().jobHistory.length;
+                    let polls = 0;
+                    const pollInterval = setInterval(async () => {
+                        polls++;
+                        await get().fetchJobHistory(jobId);
+                        await get().fetchJobs();
+                        // Clear running state when new history appears or timeout
+                        const currentLen = get().jobHistory.length;
+                        if (currentLen > prevHistoryLen || polls >= 24) {
+                            clearInterval(pollInterval);
+                            const updated = new Set(get().triggeredJobIds);
+                            updated.delete(jobId);
+                            set({ triggeredJobIds: updated });
+                        }
+                    }, 5000);
+                } catch (e) {
+                    console.error("Failed to trigger job", e);
+                    const updated = new Set(get().triggeredJobIds);
+                    updated.delete(jobId);
+                    set({ triggeredJobIds: updated });
+                }
+            },
+            deleteJobHistoryEntry: async (jobId, runId) => {
+                try {
+                    await api.delete(`${API_BASE}/cron/jobs/${jobId}/history/${runId}`);
+                    set({ jobHistory: get().jobHistory.filter((e: any) => e.run_id !== runId) });
+                } catch (e) {
+                    console.error("Failed to delete history entry", e);
+                }
+            },
+            updateJob: async (id, data) => {
+                try {
+                    await api.put(`${API_BASE}/cron/jobs/${id}`, data);
+                    await get().fetchJobs();
+                } catch (e) {
+                    console.error("Failed to update job", e);
+                    throw e;
                 }
             },
 
@@ -719,7 +804,7 @@ export const useAppStore = create<AppState>()(
 
             // --- Canvas Slice Implementation ---
             canvasSurfaces: [],
-            activeSurfaceId: 'ops-command-v1',
+            activeSurfaceId: 'main-canvas',
             selectedCanvasWidgetId: null,
             fetchCanvasSurfaces: async () => {
                 try {
@@ -1008,9 +1093,11 @@ export const useAppStore = create<AppState>()(
                     );
                     set({ ollamaModels: chatModels });
 
-                    // If current localModel is not in the list, and list is not empty, pick first one
+                    // If current localModel is not in the Ollama list, and list is not empty, pick first one
+                    // But skip if current model is a Gemini model (not an Ollama model)
                     const current = get().localModel;
-                    if (!chatModels.some((m: any) => m.name === current) && chatModels.length > 0) {
+                    const isGeminiModel = current.startsWith('gemini');
+                    if (!isGeminiModel && !chatModels.some((m: any) => m.name === current) && chatModels.length > 0) {
                         set({ localModel: chatModels[0].name });
                     }
                 } catch (e) {
@@ -1078,6 +1165,9 @@ export const useAppStore = create<AppState>()(
             isSidebarSubPanelOpen: true,
             setSidebarSubPanelOpen: (open) => set({ isSidebarSubPanelOpen: open }),
             toggleSidebarSubPanel: () => set(state => ({ isSidebarSubPanelOpen: !state.isSidebarSubPanelOpen })),
+            isSidebarExpanded: true,
+            setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
+            toggleSidebarExpanded: () => set(state => ({ isSidebarExpanded: !state.isSidebarExpanded })),
             settingsActiveTab: 'models',
             setSettingsActiveTab: (tab) => set({ settingsActiveTab: tab }),
             ragSearchQuery: '',
@@ -1230,16 +1320,11 @@ export const useAppStore = create<AppState>()(
             }),
             removeSelectedContext: (index) => {
                 const newContexts = get().selectedContexts.filter((_, i) => i !== index);
-                // Close chat panel when all contexts are removed
-                if (newContexts.length === 0) {
-                    set({ selectedContexts: newContexts, showNewsChatPanel: false });
-                } else {
-                    set({ selectedContexts: newContexts });
-                }
+                set({ selectedContexts: newContexts });
             },
-            clearSelectedContexts: () => set({ selectedContexts: [], showNewsChatPanel: false }),
+            clearSelectedContexts: () => set({ selectedContexts: [] }),
             selectedMcpServer: null,
-            setSelectedMcpServer: (server) => set({ selectedMcpServer: server, sidebarTab: 'mcp' }),
+            setSelectedMcpServer: (server) => set({ selectedMcpServer: server }),
             showRagInsights: false,
             setShowRagInsights: (show) => set({ showRagInsights: show }),
             toggleRagInsights: () => set(state => ({ showRagInsights: !state.showRagInsights })),
@@ -1629,16 +1714,20 @@ export const useAppStore = create<AppState>()(
 
             // --- Remme Slice ---
             memories: [],
+            memoriesLoading: false,
+            memoriesError: false,
             setMemories: (memories) => set({ memories }),
             fetchMemories: async () => {
+                set({ memoriesLoading: true, memoriesError: false });
                 try {
                     const spaceId = get().currentSpaceId;
                     // When Global (null), pass __global__ so backend returns only unscoped memories
                     const filterSpaceId = spaceId ?? '__global__';
                     const res = await api.getMemories(filterSpaceId);
-                    set({ memories: res.memories });
+                    set({ memories: res.memories, memoriesLoading: false });
                 } catch (e) {
                     console.error("Failed to fetch memories", e);
+                    set({ memoriesLoading: false, memoriesError: true });
                 }
             },
             addMemory: async (text, category = "general", space_id) => {
@@ -2408,10 +2497,14 @@ export const useAppStore = create<AppState>()(
                     console.error("Failed to load artifact", e);
                 }
             },
-            createArtifact: async (type, prompt, title) => {
+            createArtifact: async (type, prompt, title, slideMode) => {
                 set({ isGenerating: true });
                 try {
-                    const data = await api.createArtifact(type, { prompt, title });
+                    const payload: { prompt: string; title?: string; slide_mode?: string } = { prompt, title };
+                    if (type === 'slides' && slideMode) {
+                        payload.slide_mode = slideMode;
+                    }
+                    const data = await api.createArtifact(type, payload);
                     const createdArtifactId = data?.id ?? data?.artifact_id;
                     if (!createdArtifactId) {
                         throw new Error("Create artifact response missing artifact id");
@@ -2426,10 +2519,10 @@ export const useAppStore = create<AppState>()(
                     set({ isGenerating: false });
                 }
             },
-            approveOutline: async (id) => {
+            approveOutline: async (id, modifications) => {
                 set({ isApproving: true, approveError: null });
                 try {
-                    const data = await api.approveOutline(id, true);
+                    const data = await api.approveOutline(id, true, modifications);
                     set({ activeArtifact: data, activeArtifactId: data.id });
                     await get().fetchArtifacts();
                 } catch (e: any) {
@@ -2585,6 +2678,23 @@ export const useAppStore = create<AppState>()(
                     }
                 }
             },
+            patchSlideContent: async (artifactId: string, slides: Record<number, Record<string, string>>, baseRevisionId?: string) => {
+                set({ editLoading: true, editError: null, editConflict: false });
+                try {
+                    const result = await api.patchSlideContent(artifactId, slides, baseRevisionId);
+                    set({ activeArtifact: result, editLoading: false });
+                    get().fetchArtifacts?.();
+                } catch (e: any) {
+                    const status = e?.response?.status;
+                    if (status === 409) {
+                        set({ editConflict: true, editLoading: false });
+                    } else {
+                        const detail = e?.response?.data?.detail;
+                        const msg = typeof detail === 'string' ? detail : (e?.message || 'Patch failed');
+                        set({ editError: msg, editLoading: false });
+                    }
+                }
+            },
             clearEditState: () => set({ editError: null, editConflict: false }),
         }),
         {
@@ -2624,6 +2734,8 @@ export const useAppStore = create<AppState>()(
                 authToken: state.authToken,
                 authUserFirstName: state.authUserFirstName,
                 authUserEmail: state.authUserEmail,
+                // Canvas
+                activeSurfaceId: state.activeSurfaceId,
             }),
         }
     )
